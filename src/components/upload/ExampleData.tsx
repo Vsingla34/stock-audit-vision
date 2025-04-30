@@ -6,12 +6,12 @@ import { toast } from "sonner";
 
 export const ExampleData = () => {
   const itemMasterTemplate = 
-`id,sku,name,category,systemQuantity,location,unitCost
-1001,ITEM1001,Laptop Dell XPS 15,Electronics,25,Warehouse A,1299.99
-1002,ITEM1002,Ergonomic Office Chair,Furniture,15,Warehouse B,249.99
-1003,ITEM1003,Wireless Keyboard,Electronics,50,Warehouse A,59.99
-1004,ITEM1004,LED Monitor 27",Electronics,30,Warehouse A,299.99
-1005,ITEM1005,Standing Desk,Furniture,10,Warehouse C,399.99`;
+`id,sku,name,category,location,unitCost
+1001,ITEM1001,Laptop Dell XPS 15,Electronics,Warehouse A,1299.99
+1002,ITEM1002,Ergonomic Office Chair,Furniture,Warehouse B,249.99
+1003,ITEM1003,Wireless Keyboard,Electronics,Warehouse A,59.99
+1004,ITEM1004,LED Monitor 27",Electronics,Warehouse A,299.99
+1005,ITEM1005,Standing Desk,Furniture,Warehouse C,399.99`;
 
   const closingStockTemplate = 
 `id,sku,systemQuantity,location
@@ -51,7 +51,7 @@ export const ExampleData = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Required columns: id, sku, name, category, systemQuantity, location
+            Required columns: id, sku, name, category, location (quantity should only be in closing stock)
           </p>
           <Button 
             variant="outline" 

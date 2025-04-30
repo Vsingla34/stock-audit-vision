@@ -60,7 +60,14 @@ export const FileUploader = () => {
     try {
       if (itemMasterFile) {
         const text = await itemMasterFile.text();
-        const items = processCSV(text);
+        let items = processCSV(text);
+        
+        // For item master, ensure systemQuantity is 0 if not present
+        items = items.map(item => ({
+          ...item,
+          systemQuantity: 0
+        }));
+        
         setItemMaster(items);
         
         toast.success("Item master data imported", {
@@ -94,7 +101,7 @@ export const FileUploader = () => {
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
             <p className="mb-4 text-sm text-muted-foreground">
-              Upload your Item Master CSV file
+              Upload your Item Master CSV file (without quantities)
             </p>
             <input
               type="file"
@@ -128,7 +135,7 @@ export const FileUploader = () => {
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
             <p className="mb-4 text-sm text-muted-foreground">
-              Upload your Closing Stock CSV file
+              Upload your Closing Stock CSV file (with quantities)
             </p>
             <input
               type="file"
@@ -169,8 +176,9 @@ export const FileUploader = () => {
             <ul className="list-disc list-inside space-y-1">
               <li>CSV files only</li>
               <li>First row must contain column headers</li>
-              <li>Required columns for Item Master: id, sku, name, category, systemQuantity, location</li>
-              <li>Required columns for Closing Stock: id, sku, systemQuantity</li>
+              <li>Required columns for Item Master: id, sku, name, category, location</li>
+              <li>Required columns for Closing Stock: id, sku, systemQuantity, location</li>
+              <li>Multiple locations are supported - items with the same SKU but different locations will be treated as separate inventory items</li>
             </ul>
           </div>
         </CardContent>
