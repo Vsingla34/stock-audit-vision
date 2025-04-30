@@ -11,6 +11,7 @@ import Search from "./pages/Search";
 import Upload from "./pages/Upload";
 import Reports from "./pages/Reports";
 import Analytics from "./pages/Analytics";
+import LocationManagement from "./pages/LocationManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/upload" element={<Upload />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/locations" element={<LocationManagement />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

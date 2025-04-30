@@ -5,7 +5,8 @@ import {
   FileSpreadsheet,
   FileChartPie,
   FileChartColumn,
-  Search
+  Search,
+  Building
 } from "lucide-react";
 import {
   Sidebar as ShadcnSidebar,
@@ -36,6 +37,11 @@ const menuItems = [
     title: "Search",
     url: "/search",
     icon: Search
+  },
+  {
+    title: "Locations",
+    url: "/locations",
+    icon: Building
   },
   {
     title: "Reports",
