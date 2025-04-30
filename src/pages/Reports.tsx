@@ -4,14 +4,109 @@ import { useInventory } from "@/context/InventoryContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 const Reports = () => {
-  const { auditedItems, getInventorySummary } = useInventory();
+  const { auditedItems, itemMaster, getInventorySummary } = useInventory();
   const summary = getInventorySummary();
 
-  const downloadReport = (type: string) => {
-    // This is a placeholder for actual report generation
-    alert(`Downloading ${type} report...`);
+  const generateCSV = (data: any[], filename: string) => {
+    // Get all possible headers from all objects
+    const headers = Array.from(
+      new Set(
+        data.flatMap(item => Object.keys(item))
+      )
+    );
+
+    // Create CSV header row
+    let csvContent = headers.join(',') + '\n';
+
+    // Add data rows
+    data.forEach(item => {
+      const row = headers.map(header => {
+        // Handle commas and quotes in the data
+        const value = item[header] !== undefined ? String(item[header]) : '';
+        return value.includes(',') ? `"${value}"` : value;
+      }).join(',');
+      csvContent += row + '\n';
+    });
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`${filename} downloaded`);
+  };
+
+  const downloadReconciliationReport = () => {
+    // Combine item master with audited items
+    const reportData = itemMaster.map(item => {
+      const auditedItem = auditedItems.find(a => a.id === item.id);
+      return {
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        category: item.category,
+        location: item.location,
+        systemQuantity: item.systemQuantity,
+        physicalQuantity: auditedItem?.physicalQuantity || 0,
+        variance: auditedItem ? auditedItem.physicalQuantity - item.systemQuantity : -item.systemQuantity,
+        status: auditedItem?.status || 'pending',
+        lastAudited: auditedItem?.lastAudited || ''
+      };
+    });
+    
+    generateCSV(reportData, 'inventory_reconciliation_report.csv');
+  };
+
+  const downloadDiscrepancyReport = () => {
+    // Filter only items with discrepancies
+    const discrepancies = itemMaster.map(item => {
+      const auditedItem = auditedItems.find(a => a.id === item.id);
+      if (!auditedItem) return null;
+      
+      const variance = auditedItem.physicalQuantity - item.systemQuantity;
+      if (variance === 0) return null;
+      
+      return {
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        category: item.category,
+        location: item.location,
+        systemQuantity: item.systemQuantity,
+        physicalQuantity: auditedItem.physicalQuantity,
+        variance,
+        lastAudited: auditedItem.lastAudited || ''
+      };
+    }).filter(Boolean);
+    
+    generateCSV(discrepancies, 'discrepancy_report.csv');
+  };
+
+  const downloadSummaryReport = () => {
+    // Create summary report
+    const summaryData = [
+      {
+        totalItems: summary.totalItems,
+        auditedItems: summary.auditedItems,
+        pendingItems: summary.pendingItems,
+        matchedItems: summary.matched,
+        discrepancies: summary.discrepancies,
+        auditCompletionPercentage: summary.totalItems > 0 
+          ? Math.round((summary.auditedItems / summary.totalItems) * 100) 
+          : 0,
+        generatedDate: new Date().toISOString()
+      }
+    ];
+    
+    generateCSV(summaryData, 'audit_summary_report.csv');
   };
 
   return (
@@ -37,7 +132,7 @@ const Reports = () => {
               <Button 
                 variant="outline" 
                 className="w-full" 
-                onClick={() => downloadReport("reconciliation")}
+                onClick={downloadReconciliationReport}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
@@ -59,7 +154,7 @@ const Reports = () => {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => downloadReport("discrepancy")}
+                onClick={downloadDiscrepancyReport}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download Excel
@@ -81,10 +176,10 @@ const Reports = () => {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => downloadReport("summary")}
+                onClick={downloadSummaryReport}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download PDF
+                Download CSV
               </Button>
             </CardContent>
           </Card>
