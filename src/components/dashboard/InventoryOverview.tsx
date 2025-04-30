@@ -1,7 +1,7 @@
 
 import { useInventory } from "@/context/InventoryContext";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { BarChart, FileChart, CheckCheck, AlertCircle } from "lucide-react";
+import { BarChart, FileText, CheckCheck, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
@@ -18,7 +18,7 @@ export const InventoryOverview = () => {
         title="Total Inventory Items"
         value={summary.totalItems}
         description="Total items in inventory"
-        icon={<FileChart className="h-4 w-4 text-muted-foreground" />}
+        icon={<FileText className="h-4 w-4 text-muted-foreground" />}
       />
       <StatCard
         title="Audit Progress"

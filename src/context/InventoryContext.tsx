@@ -58,20 +58,27 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (existingIndex >= 0) {
         // Update existing audit
         const updatedAuditItems = [...auditedItems];
+        const newQuantity = updatedAuditItems[existingIndex].physicalQuantity + 1;
+        const newStatus: "matched" | "discrepancy" = 
+          newQuantity === updatedAuditItems[existingIndex].systemQuantity ? "matched" : "discrepancy";
+        
         updatedAuditItems[existingIndex] = {
           ...updatedAuditItems[existingIndex],
-          physicalQuantity: updatedAuditItems[existingIndex].physicalQuantity + 1,
+          physicalQuantity: newQuantity,
           lastAudited: now,
-          status: updatedAuditItems[existingIndex].physicalQuantity + 1 === updatedAuditItems[existingIndex].systemQuantity ? "matched" : "discrepancy"
+          status: newStatus
         };
         setAuditedItems(updatedAuditItems);
       } else {
         // Add new audit
-        const auditedItem = {
+        const status: "matched" | "discrepancy" = 
+          1 === scannedItem.systemQuantity ? "matched" : "discrepancy";
+        
+        const auditedItem: InventoryItem = {
           ...scannedItem,
           physicalQuantity: 1,
           lastAudited: now,
-          status: 1 === scannedItem.systemQuantity ? "matched" : "discrepancy"
+          status: status
         };
         setAuditedItems(prev => [...prev, auditedItem]);
       }
@@ -95,20 +102,26 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (existingIndex >= 0) {
       // Update existing item
       const updatedItems = [...auditedItems];
+      const status: "matched" | "discrepancy" = 
+        quantity === item.systemQuantity ? "matched" : "discrepancy";
+      
       updatedItems[existingIndex] = {
         ...updatedItems[existingIndex],
         physicalQuantity: quantity,
         lastAudited: now,
-        status: quantity === item.systemQuantity ? "matched" : "discrepancy"
+        status: status
       };
       setAuditedItems(updatedItems);
     } else {
       // Add new item
-      const newItem = {
+      const status: "matched" | "discrepancy" = 
+        quantity === item.systemQuantity ? "matched" : "discrepancy";
+      
+      const newItem: InventoryItem = {
         ...item,
         physicalQuantity: quantity,
         lastAudited: now,
-        status: quantity === item.systemQuantity ? "matched" : "discrepancy"
+        status: status
       };
       setAuditedItems(prev => [...prev, newItem]);
     }
