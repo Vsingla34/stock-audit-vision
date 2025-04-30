@@ -1,9 +1,8 @@
-
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInventory } from "@/context/InventoryContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, FilePdf, FileSpreadsheet } from "lucide-react";
+import { Download, FileText, FileType, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -330,7 +329,7 @@ const Reports = () => {
           <Card className="bg-gradient-to-br from-purple-50 to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FilePdf className="h-5 w-5 text-purple-600" />
+                <FileType className="h-5 w-5 text-purple-600" />
                 Complete PDF Report
               </CardTitle>
             </CardHeader>
