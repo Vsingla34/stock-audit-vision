@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 export interface InventoryItem {
   id: string;
@@ -20,7 +20,7 @@ interface InventoryContextType {
   setClosingStock: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   auditedItems: InventoryItem[];
   setAuditedItems: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
-  scanItem: (barcode: string) => void;
+  scanItem: (barcode: string, location: string) => void;
   searchItem: (query: string) => InventoryItem[];
   addItemToAudit: (item: InventoryItem, quantity: number) => void;
   getInventorySummary: () => InventorySummary;
@@ -36,24 +36,97 @@ export interface InventorySummary {
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
+const LOCAL_STORAGE_KEYS = {
+  ITEM_MASTER: 'inventory-item-master',
+  CLOSING_STOCK: 'inventory-closing-stock',
+  AUDITED_ITEMS: 'inventory-audited-items'
+};
+
 export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Sample data for demonstration
-  const [itemMaster, setItemMaster] = useState<InventoryItem[]>([
-    { id: "1001", sku: "ITEM1001", name: "Laptop Dell XPS 15", category: "Electronics", systemQuantity: 25, physicalQuantity: 0, location: "Warehouse A" },
-    { id: "1002", sku: "ITEM1002", name: "Ergonomic Office Chair", category: "Furniture", systemQuantity: 15, physicalQuantity: 0, location: "Warehouse B" },
-    { id: "1003", sku: "ITEM1003", name: "Wireless Keyboard", category: "Electronics", systemQuantity: 50, physicalQuantity: 0, location: "Warehouse A" },
-    { id: "1004", sku: "ITEM1004", name: "LED Monitor 27\"", category: "Electronics", systemQuantity: 30, physicalQuantity: 0, location: "Warehouse A" },
-    { id: "1005", sku: "ITEM1005", name: "Standing Desk", category: "Furniture", systemQuantity: 10, physicalQuantity: 0, location: "Warehouse C" }
-  ]);
+  const [itemMaster, setItemMaster] = useState<InventoryItem[]>(() => {
+    const savedData = localStorage.getItem(LOCAL_STORAGE_KEYS.ITEM_MASTER);
+    if (savedData) {
+      return JSON.parse(savedData);
+    }
+    return [
+      { id: "1001", sku: "ITEM1001", name: "Laptop Dell XPS 15", category: "Electronics", systemQuantity: 0, physicalQuantity: 0, location: "Warehouse A" },
+      { id: "1001", sku: "ITEM1001", name: "Laptop Dell XPS 15", category: "Electronics", systemQuantity: 0, physicalQuantity: 0, location: "Warehouse B" },
+      { id: "1002", sku: "ITEM1002", name: "Ergonomic Office Chair", category: "Furniture", systemQuantity: 0, physicalQuantity: 0, location: "Warehouse B" },
+      { id: "1003", sku: "ITEM1003", name: "Wireless Keyboard", category: "Electronics", systemQuantity: 0, physicalQuantity: 0, location: "Warehouse A" },
+      { id: "1004", sku: "ITEM1004", name: "LED Monitor 27\"", category: "Electronics", systemQuantity: 0, physicalQuantity: 0, location: "Warehouse A" },
+      { id: "1005", sku: "ITEM1005", name: "Standing Desk", category: "Furniture", systemQuantity: 0, physicalQuantity: 0, location: "Warehouse C" }
+    ];
+  });
   
-  const [closingStock, setClosingStock] = useState<InventoryItem[]>(itemMaster);
-  const [auditedItems, setAuditedItems] = useState<InventoryItem[]>([]);
+  const [closingStock, setClosingStock] = useState<InventoryItem[]>(() => {
+    const savedData = localStorage.getItem(LOCAL_STORAGE_KEYS.CLOSING_STOCK);
+    if (savedData) {
+      return JSON.parse(savedData);
+    }
+    return [];
+  });
 
-  const scanItem = (barcode: string) => {
-    const scannedItem = itemMaster.find(item => item.sku === barcode || item.id === barcode);
+  const [auditedItems, setAuditedItems] = useState<InventoryItem[]>(() => {
+    const savedData = localStorage.getItem(LOCAL_STORAGE_KEYS.AUDITED_ITEMS);
+    if (savedData) {
+      return JSON.parse(savedData);
+    }
+    return [];
+  });
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.ITEM_MASTER, JSON.stringify(itemMaster));
+  }, [itemMaster]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.CLOSING_STOCK, JSON.stringify(closingStock));
+    
+    // Update the item master system quantities when closing stock changes
+    if (closingStock.length > 0) {
+      const updatedItemMaster = [...itemMaster];
+      
+      // Process each closing stock item
+      closingStock.forEach(stockItem => {
+        const itemIndex = updatedItemMaster.findIndex(
+          item => item.id === stockItem.id && item.location === stockItem.location
+        );
+        
+        if (itemIndex >= 0) {
+          // Update existing item
+          updatedItemMaster[itemIndex] = {
+            ...updatedItemMaster[itemIndex],
+            systemQuantity: stockItem.systemQuantity
+          };
+        } else {
+          // Add new item if it doesn't exist in item master
+          updatedItemMaster.push({
+            ...stockItem,
+            category: stockItem.category || "Unknown",
+            name: stockItem.name || `Item ${stockItem.id}`
+          });
+        }
+      });
+      
+      setItemMaster(updatedItemMaster);
+    }
+  }, [closingStock]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.AUDITED_ITEMS, JSON.stringify(auditedItems));
+  }, [auditedItems]);
+
+  const scanItem = (barcode: string, location: string) => {
+    const scannedItem = itemMaster.find(
+      item => (item.sku === barcode || item.id === barcode) && item.location === location
+    );
+    
     if (scannedItem) {
       const now = new Date().toISOString();
-      const existingIndex = auditedItems.findIndex(i => i.id === scannedItem.id);
+      const existingIndex = auditedItems.findIndex(i => 
+        i.id === scannedItem.id && i.location === scannedItem.location
+      );
       
       if (existingIndex >= 0) {
         // Update existing audit
@@ -97,7 +170,9 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addItemToAudit = (item: InventoryItem, quantity: number) => {
     const now = new Date().toISOString();
-    const existingIndex = auditedItems.findIndex(i => i.id === item.id);
+    const existingIndex = auditedItems.findIndex(i => 
+      i.id === item.id && i.location === item.location
+    );
     
     if (existingIndex >= 0) {
       // Update existing item

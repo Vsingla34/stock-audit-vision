@@ -37,8 +37,8 @@ export const RecentActivity = () => {
         <div className="overflow-hidden">
           <table className="w-full text-sm">
             <tbody>
-              {recentItems.map((item) => (
-                <tr key={item.id} className="border-b last:border-0">
+              {recentItems.map((item, index) => (
+                <tr key={`${item.id}-${item.location}-${index}`} className="border-b last:border-0">
                   <td className="p-3">
                     <div className="flex items-center">
                       <div className="mr-2">
@@ -54,7 +54,9 @@ export const RecentActivity = () => {
                       </div>
                       <div>
                         <div className="font-medium">{item.name}</div>
-                        <div className="text-xs text-muted-foreground">{item.sku}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.sku} - {item.location}
+                        </div>
                       </div>
                     </div>
                   </td>

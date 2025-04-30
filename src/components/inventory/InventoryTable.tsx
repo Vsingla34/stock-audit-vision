@@ -17,7 +17,7 @@ export const InventoryTable = () => {
   
   // Combine data from itemMaster and auditedItems
   const tableData = itemMaster.map(item => {
-    const auditedItem = auditedItems.find(a => a.id === item.id);
+    const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
     if (auditedItem) {
       return {
         ...item,
@@ -76,9 +76,9 @@ export const InventoryTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tableData.map((item) => (
+          {tableData.map((item, index) => (
             <TableRow 
-              key={item.id}
+              key={`${item.id}-${item.location}-${index}`}
               className={
                 item.status === "discrepancy" 
                   ? "bg-red-50" 

@@ -60,28 +60,38 @@ export const FileUploader = () => {
     try {
       if (itemMasterFile) {
         const text = await itemMasterFile.text();
-        let items = processCSV(text);
+        const items = processCSV(text);
         
         // For item master, ensure systemQuantity is 0 if not present
-        items = items.map(item => ({
+        // and ensure each item has a location
+        const processedItems = items.map(item => ({
           ...item,
-          systemQuantity: 0
+          systemQuantity: 0,
+          location: item.location || "Default"
         }));
         
-        setItemMaster(items);
+        setItemMaster(processedItems);
         
         toast.success("Item master data imported", {
-          description: `Successfully imported ${items.length} items.`
+          description: `Successfully imported ${processedItems.length} items.`
         });
       }
       
       if (closingStockFile) {
         const text = await closingStockFile.text();
         const items = processCSV(text);
-        setClosingStock(items);
+        
+        // For closing stock, ensure each item has required fields
+        const processedItems = items.map(item => ({
+          ...item,
+          location: item.location || "Default",
+          systemQuantity: typeof item.systemQuantity === 'number' ? item.systemQuantity : 0
+        }));
+        
+        setClosingStock(processedItems);
         
         toast.success("Closing stock data imported", {
-          description: `Successfully imported ${items.length} items.`
+          description: `Successfully imported ${processedItems.length} items.`
         });
       }
     } catch (error) {

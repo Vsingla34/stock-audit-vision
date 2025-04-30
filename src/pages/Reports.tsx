@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, FileType, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import { useRef } from "react";
 
 declare module "jspdf" {
@@ -56,7 +56,7 @@ const Reports = () => {
   const downloadReconciliationReport = () => {
     // Combine item master with audited items
     const reportData = itemMaster.map(item => {
-      const auditedItem = auditedItems.find(a => a.id === item.id);
+      const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
       return {
         id: item.id,
         sku: item.sku,
@@ -77,7 +77,7 @@ const Reports = () => {
   const downloadDiscrepancyReport = () => {
     // Filter only items with discrepancies
     const discrepancies = itemMaster.map(item => {
-      const auditedItem = auditedItems.find(a => a.id === item.id);
+      const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
       if (!auditedItem) return null;
       
       const variance = auditedItem.physicalQuantity - item.systemQuantity;
@@ -144,7 +144,7 @@ const Reports = () => {
         : 0}%`]
     ];
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: 45,
       head: [["Metric", "Value"]],
       body: summaryTableBody,
@@ -153,7 +153,8 @@ const Reports = () => {
     });
     
     // Add observations section
-    const currentY = (doc as any).lastAutoTable.finalY + 10;
+    const finalY = (doc as any)['lastAutoTable'] ? (doc as any)['lastAutoTable'].finalY : 90;
+    const currentY = finalY + 10;
     doc.setFontSize(14);
     doc.text("Observations", 14, currentY);
     
@@ -181,10 +182,10 @@ const Reports = () => {
       const locationStats = locations.map(loc => {
         const locItems = itemMaster.filter(item => item.location === loc);
         const locAudited = locItems.filter(item => 
-          auditedItems.some(a => a.id === item.id)
+          auditedItems.some(a => a.id === item.id && a.location === item.location)
         );
         const locDiscrepancies = locItems.filter(item => {
-          const auditedItem = auditedItems.find(a => a.id === item.id);
+          const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
           return auditedItem && auditedItem.status === "discrepancy";
         });
         
@@ -217,7 +218,7 @@ const Reports = () => {
     // Add discrepancy table if there are any
     const discrepancies = itemMaster
       .map(item => {
-        const auditedItem = auditedItems.find(a => a.id === item.id);
+        const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
         if (!auditedItem || auditedItem.status !== "discrepancy") return null;
         
         const variance = auditedItem.physicalQuantity - item.systemQuantity;
@@ -237,7 +238,7 @@ const Reports = () => {
       doc.setFontSize(14);
       doc.text("Discrepancy Details", 14, discrepancyY);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: discrepancyY + 5,
         head: [["SKU", "Name", "Location", "System Qty", "Physical Qty", "Variance"]],
         body: discrepancies,
