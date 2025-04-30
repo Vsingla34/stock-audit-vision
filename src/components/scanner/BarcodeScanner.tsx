@@ -4,15 +4,26 @@ import { useInventory } from "@/context/InventoryContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Barcode, Scan, Check } from "lucide-react";
+import { Barcode, Scan, Check, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const BarcodeScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
   const { scanItem, itemMaster } = useInventory();
 
+  // Get unique locations from item master
+  const locations = [...new Set(itemMaster.map(item => item.location))];
+
   const handleStartScanning = () => {
+    if (!selectedLocation) {
+      toast.error("Location required", {
+        description: "Please select a location before scanning."
+      });
+      return;
+    }
     setIsScanning(true);
     // In a real app, this would activate the device camera
   };
@@ -23,18 +34,28 @@ export const BarcodeScanner = () => {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedLocation) {
+      toast.error("Location required", {
+        description: "Please select a location before scanning."
+      });
+      return;
+    }
+    
     if (manualBarcode.trim()) {
-      const found = itemMaster.some(item => item.id === manualBarcode || item.sku === manualBarcode);
+      const found = itemMaster.some(item => 
+        (item.id === manualBarcode || item.sku === manualBarcode) && 
+        item.location === selectedLocation
+      );
       
       if (found) {
-        scanItem(manualBarcode);
+        scanItem(manualBarcode, selectedLocation);
         toast.success("Item scanned successfully", {
-          description: `Barcode ${manualBarcode} has been registered.`,
+          description: `Barcode ${manualBarcode} has been registered at ${selectedLocation}.`,
         });
         setManualBarcode("");
       } else {
         toast.error("Item not found", {
-          description: `No item found with barcode ${manualBarcode}.`,
+          description: `No item found with barcode ${manualBarcode} at ${selectedLocation}.`,
         });
       }
     }
@@ -51,6 +72,22 @@ export const BarcodeScanner = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map(location => (
+                    <SelectItem key={location} value={location}>
+                      {location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             {isScanning ? (
               <div>
                 <div className="w-full aspect-video relative barcode-scanner-active rounded-lg overflow-hidden mb-4">
@@ -74,6 +111,7 @@ export const BarcodeScanner = () => {
                 variant="default" 
                 className="w-full" 
                 onClick={handleStartScanning}
+                disabled={!selectedLocation}
               >
                 <Scan className="mr-2 h-4 w-4" />
                 Start Camera Scanning
@@ -90,7 +128,7 @@ export const BarcodeScanner = () => {
                   onChange={(e) => setManualBarcode(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit">
+                <Button type="submit" disabled={!selectedLocation}>
                   <Check className="h-4 w-4" />
                 </Button>
               </form>
@@ -107,6 +145,7 @@ export const BarcodeScanner = () => {
           <div>
             <h3 className="font-medium mb-1">How to scan items:</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm">
+              <li>Select a location from the dropdown</li>
               <li>Click "Start Camera Scanning" to activate the barcode scanner</li>
               <li>Point the camera at the barcode on the item</li>
               <li>Hold steady until the barcode is recognized</li>
