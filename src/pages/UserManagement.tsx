@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useUser } from "@/context/UserContext";
@@ -34,7 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Navigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserRound, Building, Edit, Trash } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 
 const UserManagement = () => {
   const { currentUser, users, registerUser, updateUser, deleteUser, hasPermission } = useUser();
