@@ -5,8 +5,28 @@ import { ExampleData } from "@/components/upload/ExampleData";
 import { ClearDataButton } from "@/components/upload/ClearDataButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUser } from "@/context/UserContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Upload = () => {
+  const { currentUser, hasPermission } = useUser();
+  const navigate = useNavigate();
+  
+  // Redirect users without access
+  useEffect(() => {
+    // Only admins and auditors should access this page
+    if (currentUser && !["admin", "auditor"].includes(currentUser.role)) {
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
+
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "auditor")) {
+    return null; // Don't render anything while redirecting
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -14,6 +34,16 @@ const Upload = () => {
           <h1 className="text-3xl font-bold tracking-tight">Upload Data</h1>
           <p className="text-muted-foreground">Import your Item Master and Closing Stock data</p>
         </div>
+        
+        {currentUser.role === "auditor" && (
+          <Alert className="border-blue-500 bg-blue-50">
+            <AlertCircle className="h-5 w-5 text-blue-500" />
+            <AlertTitle className="text-blue-700">Auditor Access</AlertTitle>
+            <AlertDescription className="text-blue-600">
+              As an auditor, you can only upload Closing Stock data for your assigned locations.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -27,11 +57,13 @@ const Upload = () => {
               <CardHeader>
                 <CardTitle>Import Inventory Data</CardTitle>
                 <CardDescription>
-                  Upload your Item Master (without quantity) and Closing Stock (with quantity) files
+                  {currentUser.role === "admin" 
+                    ? "Upload your Item Master (without quantity) and Closing Stock (with quantity) files"
+                    : "Upload your Closing Stock (with quantity) files for your assigned locations"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUploader />
+                <FileUploader userRole={currentUser.role} assignedLocations={currentUser.assignedLocations} />
               </CardContent>
             </Card>
             

@@ -14,12 +14,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export const UserProfile = () => {
   const { currentUser, updateUser } = useUser();
   const { locations } = useInventory();
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+  const { userRoleDisplay } = useUserAccess();
   
   const [formData, setFormData] = useState({
     name: currentUser?.name || "",
@@ -53,6 +57,7 @@ export const UserProfile = () => {
   if (!currentUser) return null;
 
   const assignedLocations = currentUser.assignedLocations || [];
+  const canEdit = currentUser.role !== "client"; // Clients can't edit
 
   return (
     <Card>
@@ -62,15 +67,28 @@ export const UserProfile = () => {
             <CardTitle>User Profile</CardTitle>
             <CardDescription>View and manage your profile information</CardDescription>
           </div>
-          {!isEditing && (
+          {!isEditing && canEdit && (
             <Button variant="outline" onClick={() => setIsEditing(true)}>
               Edit Profile
             </Button>
           )}
         </div>
       </CardHeader>
+      
+      {currentUser.role === "client" && (
+        <div className="px-6">
+          <Alert className="border-amber-200 bg-amber-50 mb-4">
+            <AlertCircle className="h-5 w-5 text-amber-500" />
+            <AlertTitle className="text-amber-700">Client Account</AlertTitle>
+            <AlertDescription className="text-amber-600">
+              As a client user, you have view-only access to audit data for your assigned locations.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+      
       <CardContent className="space-y-6">
-        {isEditing ? (
+        {isEditing && canEdit ? (
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="text-sm font-medium block mb-1">
@@ -128,7 +146,7 @@ export const UserProfile = () => {
                   currentUser.role === 'admin' ? 'default' : 
                   currentUser.role === 'auditor' ? 'secondary' : 'outline'
                 }>
-                  {currentUser.role}
+                  {userRoleDisplay()}
                 </Badge>
               </div>
             </div>
@@ -171,7 +189,7 @@ export const UserProfile = () => {
           </div>
         )}
       </CardContent>
-      {isEditing && (
+      {isEditing && canEdit && (
         <CardFooter className="flex justify-between">
           <Button variant="outline" onClick={() => setIsEditing(false)}>
             Cancel

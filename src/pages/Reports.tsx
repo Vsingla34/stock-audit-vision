@@ -1,3 +1,4 @@
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInventory } from "@/context/InventoryContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,10 @@ import { Download, FileText, FileType, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useUser } from "@/context/UserContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 declare module "jspdf" {
   interface jsPDF {
@@ -15,9 +19,44 @@ declare module "jspdf" {
 }
 
 const Reports = () => {
-  const { auditedItems, itemMaster, getInventorySummary } = useInventory();
-  const summary = getInventorySummary();
+  const { auditedItems, itemMaster, getInventorySummary, getLocationSummary, locations } = useInventory();
+  const { currentUser } = useUser();
+  const { accessibleLocations } = useUserAccess();
   const reportRef = useRef(null);
+  
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [filteredAuditedItems, setFilteredAuditedItems] = useState(auditedItems);
+  const [filteredItemMaster, setFilteredItemMaster] = useState(itemMaster);
+  const [summary, setSummary] = useState(getInventorySummary());
+  
+  const userLocations = accessibleLocations();
+  
+  // Set initial location if user has restricted access
+  useEffect(() => {
+    if (currentUser?.role !== "admin" && userLocations.length > 0) {
+      setSelectedLocation(userLocations[0].id);
+    }
+  }, [currentUser, userLocations]);
+  
+  // Filter data based on selected location and user role
+  useEffect(() => {
+    if (currentUser?.role === "admin" && !selectedLocation) {
+      // Admin with no location filter - show all data
+      setFilteredAuditedItems(auditedItems);
+      setFilteredItemMaster(itemMaster);
+      setSummary(getInventorySummary());
+    } else if (selectedLocation) {
+      // Filter by selected location
+      const locationObj = locations.find(loc => loc.id === selectedLocation);
+      
+      if (locationObj) {
+        const locationName = locationObj.name;
+        setFilteredAuditedItems(auditedItems.filter(item => item.location === locationName));
+        setFilteredItemMaster(itemMaster.filter(item => item.location === locationName));
+        setSummary(getLocationSummary(locationName));
+      }
+    }
+  }, [selectedLocation, auditedItems, itemMaster, locations, currentUser]);
 
   const generateCSV = (data: any[], filename: string) => {
     // Get all possible headers from all objects
@@ -55,8 +94,8 @@ const Reports = () => {
 
   const downloadReconciliationReport = () => {
     // Combine item master with audited items
-    const reportData = itemMaster.map(item => {
-      const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
+    const reportData = filteredItemMaster.map(item => {
+      const auditedItem = filteredAuditedItems.find(a => a.id === item.id && a.location === item.location);
       return {
         id: item.id,
         sku: item.sku,
@@ -71,13 +110,16 @@ const Reports = () => {
       };
     });
     
-    generateCSV(reportData, 'inventory_reconciliation_report.csv');
+    const locationInfo = selectedLocation ? 
+      `_${locations.find(loc => loc.id === selectedLocation)?.name}` : '';
+      
+    generateCSV(reportData, `inventory_reconciliation_report${locationInfo}.csv`);
   };
 
   const downloadDiscrepancyReport = () => {
     // Filter only items with discrepancies
-    const discrepancies = itemMaster.map(item => {
-      const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
+    const discrepancies = filteredItemMaster.map(item => {
+      const auditedItem = filteredAuditedItems.find(a => a.id === item.id && a.location === item.location);
       if (!auditedItem) return null;
       
       const variance = auditedItem.physicalQuantity - item.systemQuantity;
@@ -96,7 +138,10 @@ const Reports = () => {
       };
     }).filter(Boolean);
     
-    generateCSV(discrepancies, 'discrepancy_report.csv');
+    const locationInfo = selectedLocation ? 
+      `_${locations.find(loc => loc.id === selectedLocation)?.name}` : '';
+      
+    generateCSV(discrepancies, `discrepancy_report${locationInfo}.csv`);
   };
 
   const downloadSummaryReport = () => {
@@ -111,11 +156,16 @@ const Reports = () => {
         auditCompletionPercentage: summary.totalItems > 0 
           ? Math.round((summary.auditedItems / summary.totalItems) * 100) 
           : 0,
-        generatedDate: new Date().toISOString()
+        generatedDate: new Date().toISOString(),
+        location: selectedLocation ? 
+          locations.find(loc => loc.id === selectedLocation)?.name : 'All Locations'
       }
     ];
     
-    generateCSV(summaryData, 'audit_summary_report.csv');
+    const locationInfo = selectedLocation ? 
+      `_${locations.find(loc => loc.id === selectedLocation)?.name}` : '';
+      
+    generateCSV(summaryData, `audit_summary_report${locationInfo}.csv`);
   };
 
   const generatePDFReport = () => {
@@ -123,7 +173,11 @@ const Reports = () => {
     
     // Add title
     doc.setFontSize(18);
-    doc.text("Inventory Audit Report", 14, 22);
+    const reportTitle = selectedLocation 
+      ? `Inventory Audit Report - ${locations.find(loc => loc.id === selectedLocation)?.name}`
+      : "Inventory Audit Report - All Locations";
+    
+    doc.text(reportTitle, 14, 22);
     
     // Add date
     doc.setFontSize(11);
@@ -174,18 +228,18 @@ const Reports = () => {
     }
     
     // Add location-specific observations if we have any audited items
-    if (auditedItems.length > 0) {
+    if (filteredAuditedItems.length > 0 && !selectedLocation) {
       // Get unique locations
-      const locations = [...new Set(itemMaster.map(item => item.location))];
+      const uniqueLocations = [...new Set(filteredItemMaster.map(item => item.location))];
       
       // Calculate discrepancies by location
-      const locationStats = locations.map(loc => {
-        const locItems = itemMaster.filter(item => item.location === loc);
+      const locationStats = uniqueLocations.map(loc => {
+        const locItems = filteredItemMaster.filter(item => item.location === loc);
         const locAudited = locItems.filter(item => 
-          auditedItems.some(a => a.id === item.id && a.location === item.location)
+          filteredAuditedItems.some(a => a.id === item.id && a.location === item.location)
         );
         const locDiscrepancies = locItems.filter(item => {
-          const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
+          const auditedItem = filteredAuditedItems.find(a => a.id === item.id && a.location === item.location);
           return auditedItem && auditedItem.status === "discrepancy";
         });
         
@@ -216,9 +270,9 @@ const Reports = () => {
     });
     
     // Add discrepancy table if there are any
-    const discrepancies = itemMaster
+    const discrepancies = filteredItemMaster
       .map(item => {
-        const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
+        const auditedItem = filteredAuditedItems.find(a => a.id === item.id && a.location === item.location);
         if (!auditedItem || auditedItem.status !== "discrepancy") return null;
         
         const variance = auditedItem.physicalQuantity - item.systemQuantity;
@@ -248,16 +302,48 @@ const Reports = () => {
       });
     }
     
-    doc.save("inventory_audit_report.pdf");
+    const locationInfo = selectedLocation ? 
+      `_${locations.find(loc => loc.id === selectedLocation)?.name}` : '';
+      
+    doc.save(`inventory_audit_report${locationInfo}.pdf`);
     toast.success("PDF Report downloaded");
   };
 
   return (
     <AppLayout>
       <div className="space-y-6" ref={reportRef}>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground">Generate and download inventory audit reports</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+            <p className="text-muted-foreground">Generate and download inventory audit reports</p>
+          </div>
+          
+          {/* Location selector */}
+          <div className="w-64">
+            <Select 
+              value={selectedLocation} 
+              onValueChange={setSelectedLocation}
+              disabled={currentUser?.role !== "admin" && userLocations.length <= 1}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  currentUser?.role === "admin" ? 
+                    "All Locations" : 
+                    userLocations.length ? userLocations[0].name : "No locations"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {currentUser?.role === "admin" && (
+                  <SelectItem value="">All Locations</SelectItem>
+                )}
+                {userLocations.map(location => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

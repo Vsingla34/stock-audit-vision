@@ -5,12 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Upload, Check } from "lucide-react";
 import { toast } from "sonner";
-import { InventoryItem } from "@/context/InventoryContext";
+import { InventoryItem, Location } from "@/context/InventoryContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export const FileUploader = () => {
+interface FileUploaderProps {
+  userRole: 'admin' | 'auditor' | 'client';
+  assignedLocations?: string[];
+}
+
+export const FileUploader = ({ userRole, assignedLocations = [] }: FileUploaderProps) => {
   const [itemMasterFile, setItemMasterFile] = useState<File | null>(null);
   const [closingStockFile, setClosingStockFile] = useState<File | null>(null);
-  const { setItemMaster, setClosingStock } = useInventory();
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const { setItemMaster, setClosingStock, locations } = useInventory();
+
+  // Filter locations based on user role and assignments
+  const accessibleLocations = locations.filter(location => 
+    userRole === "admin" || 
+    (assignedLocations && assignedLocations.includes(location.id))
+  );
 
   const handleItemMasterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -58,7 +71,8 @@ export const FileUploader = () => {
 
   const handleImport = async () => {
     try {
-      if (itemMasterFile) {
+      // For admins: Item Master upload
+      if (userRole === "admin" && itemMasterFile) {
         const text = await itemMasterFile.text();
         const items = processCSV(text);
         
@@ -77,9 +91,30 @@ export const FileUploader = () => {
         });
       }
       
+      // Closing Stock upload (both admin and auditor)
       if (closingStockFile) {
         const text = await closingStockFile.text();
-        const items = processCSV(text);
+        let items = processCSV(text);
+        
+        // For auditors, filter and set location based on selection
+        if (userRole === "auditor") {
+          if (!selectedLocation) {
+            toast.error("Please select a location");
+            return;
+          }
+          
+          const locationName = locations.find(loc => loc.id === selectedLocation)?.name;
+          if (!locationName) {
+            toast.error("Invalid location selected");
+            return;
+          }
+          
+          // Force all items to have the selected location
+          items = items.map(item => ({
+            ...item,
+            location: locationName
+          }));
+        }
         
         // For closing stock, ensure each item has required fields
         const processedItems = items.map(item => ({
@@ -103,49 +138,73 @@ export const FileUploader = () => {
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload Item Master Data</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-            <p className="mb-4 text-sm text-muted-foreground">
-              Upload your Item Master CSV file (without quantities)
-            </p>
-            <input
-              type="file"
-              accept=".csv"
-              className="hidden"
-              id="itemMasterUpload"
-              onChange={handleItemMasterUpload}
-            />
-            <Button
-              variant="outline"
-              onClick={() => document.getElementById("itemMasterUpload")?.click()}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Select File
-            </Button>
-            {itemMasterFile && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Selected: {itemMasterFile.name}
-                <Check className="inline-block ml-1 h-4 w-4 text-green-500" />
+      {/* Item Master Upload - Admin Only */}
+      {userRole === "admin" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Item Master Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+              <p className="mb-4 text-sm text-muted-foreground">
+                Upload your Item Master CSV file (without quantities)
               </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                id="itemMasterUpload"
+                onChange={handleItemMasterUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById("itemMasterUpload")?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Select File
+              </Button>
+              {itemMasterFile && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Selected: {itemMasterFile.name}
+                  <Check className="inline-block ml-1 h-4 w-4 text-green-500" />
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
+      {/* Closing Stock Upload - Admin & Auditors */}
+      <Card className={userRole === "admin" ? "" : "md:col-span-2"}>
         <CardHeader>
           <CardTitle>Upload Closing Stock Data</CardTitle>
         </CardHeader>
         <CardContent>
+          {userRole === "auditor" && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Select Location:</label>
+              <Select 
+                value={selectedLocation} 
+                onValueChange={setSelectedLocation}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accessibleLocations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
             <p className="mb-4 text-sm text-muted-foreground">
               Upload your Closing Stock CSV file (with quantities)
+              {userRole === "auditor" && " for the selected location"}
             </p>
             <input
               type="file"
@@ -175,7 +234,10 @@ export const FileUploader = () => {
         <CardContent className="pt-6">
           <Button 
             className="w-full" 
-            disabled={!itemMasterFile && !closingStockFile}
+            disabled={
+              (userRole === "admin" ? (!itemMasterFile && !closingStockFile) : 
+                (!closingStockFile || !selectedLocation))
+            }
             onClick={handleImport}
           >
             Import Selected Files
@@ -187,8 +249,10 @@ export const FileUploader = () => {
               <li>CSV files only</li>
               <li>First row must contain column headers</li>
               <li>Required columns for Item Master: id, sku, name, category, location</li>
-              <li>Required columns for Closing Stock: id, sku, systemQuantity, location</li>
-              <li>Multiple locations are supported - items with the same SKU but different locations will be treated as separate inventory items</li>
+              <li>Required columns for Closing Stock: id, sku, systemQuantity{userRole === "auditor" ? "" : ", location"}</li>
+              {userRole === "admin" && (
+                <li>Multiple locations are supported - items with the same SKU but different locations will be treated as separate inventory items</li>
+              )}
             </ul>
           </div>
         </CardContent>

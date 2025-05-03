@@ -1,3 +1,4 @@
+
 import { useUser } from "@/context/UserContext";
 import { useInventory } from "@/context/InventoryContext";
 
@@ -35,6 +36,31 @@ export const useUserAccess = () => {
     return currentUser.assignedLocations?.includes(locationId) || false;
   };
   
+  // Check if user can perform physical audits
+  const canPerformAudits = (): boolean => {
+    if (!currentUser) return false;
+    return ["admin", "auditor"].includes(currentUser.role);
+  };
+  
+  // Check if user can upload data
+  const canUploadData = (): boolean => {
+    if (!currentUser) return false;
+    
+    // Only admins can upload item master data
+    if (currentUser.role === "admin") return true;
+    
+    // Auditors can upload closing stock for their assigned locations
+    if (currentUser.role === "auditor") return true;
+    
+    return false;
+  };
+  
+  // Check if user can upload item master data
+  const canUploadItemMaster = (): boolean => {
+    if (!currentUser) return false;
+    return currentUser.role === "admin";
+  };
+  
   // Get user role display name
   const userRoleDisplay = (): string => {
     if (!currentUser) return "";
@@ -50,6 +76,9 @@ export const useUserAccess = () => {
   return {
     accessibleLocations,
     canAccessLocation,
+    canPerformAudits,
+    canUploadData,
+    canUploadItemMaster,
     userRoleDisplay,
     hasPermission,
     userRole: currentUser?.role,
