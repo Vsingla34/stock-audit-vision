@@ -1,0 +1,57 @@
+import { useUser } from "@/context/UserContext";
+import { useInventory } from "@/context/InventoryContext";
+
+export const useUserAccess = () => {
+  const { currentUser, hasPermission } = useUser();
+  const { locations } = useInventory();
+  
+  // Get locations accessible to the current user
+  const accessibleLocations = () => {
+    if (!currentUser) return [];
+    
+    // Admins can access all locations
+    if (currentUser.role === "admin") {
+      return locations;
+    }
+    
+    // For auditors and clients, filter by assigned locations
+    if (currentUser.assignedLocations?.length) {
+      return locations.filter(location => 
+        currentUser.assignedLocations?.includes(location.id)
+      );
+    }
+    
+    return [];
+  };
+  
+  // Check if user has access to a specific location
+  const canAccessLocation = (locationId: string): boolean => {
+    if (!currentUser) return false;
+    
+    // Admins can access all locations
+    if (currentUser.role === "admin") return true;
+    
+    // Otherwise check if location is in assigned locations
+    return currentUser.assignedLocations?.includes(locationId) || false;
+  };
+  
+  // Get user role display name
+  const userRoleDisplay = (): string => {
+    if (!currentUser) return "";
+    
+    switch (currentUser.role) {
+      case "admin": return "Administrator";
+      case "auditor": return "Inventory Auditor";
+      case "client": return "Client User";
+      default: return currentUser.role;
+    }
+  };
+
+  return {
+    accessibleLocations,
+    canAccessLocation,
+    userRoleDisplay,
+    hasPermission,
+    userRole: currentUser?.role,
+  };
+};
