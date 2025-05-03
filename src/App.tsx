@@ -18,15 +18,21 @@ import UserManagement from "./pages/UserManagement";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import { useUserAccess } from "./hooks/useUserAccess";
 
 const queryClient = new QueryClient();
 
 // Protected route wrapper component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children, requiredPermission = null }: { children: React.ReactNode, requiredPermission?: string | null }) => {
   const { isAuthenticated } = useUser();
+  const { hasPermission } = useUserAccess();
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -43,14 +49,14 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+              <Route path="/scanner" element={<ProtectedRoute requiredPermission="conductAudits"><Scanner /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute requiredPermission="viewReports"><Reports /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute requiredPermission="viewReports"><Analytics /></ProtectedRoute>} />
               <Route path="/locations" element={<ProtectedRoute><LocationManagement /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><AdminOverview /></ProtectedRoute>} />
-              <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute requiredPermission="viewAllLocations"><AdminOverview /></ProtectedRoute>} />
+              <Route path="/users" element={<ProtectedRoute requiredPermission="manageUsers"><UserManagement /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

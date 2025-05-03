@@ -5,25 +5,26 @@ import { ExampleData } from "@/components/upload/ExampleData";
 import { ClearDataButton } from "@/components/upload/ClearDataButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useUser } from "@/context/UserContext";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { useUser } from "@/context/UserContext";
 
 const Upload = () => {
-  const { currentUser, hasPermission } = useUser();
+  const { currentUser } = useUser();
+  const { canUploadData, canUploadItemMaster, canUploadClosingStock } = useUserAccess();
   const navigate = useNavigate();
   
   // Redirect users without access
   useEffect(() => {
-    // Only admins and auditors should access this page
-    if (currentUser && !["admin", "auditor"].includes(currentUser.role)) {
+    if (currentUser && !canUploadData()) {
       navigate("/");
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, canUploadData]);
 
-  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "auditor")) {
+  if (!currentUser || !canUploadData()) {
     return null; // Don't render anything while redirecting
   }
 
@@ -49,7 +50,9 @@ const Upload = () => {
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="upload">Upload Files</TabsTrigger>
             <TabsTrigger value="examples">Example Templates</TabsTrigger>
-            <TabsTrigger value="clear">Clear Data</TabsTrigger>
+            {canUploadItemMaster() && (
+              <TabsTrigger value="clear">Clear Data</TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="upload" className="space-y-4">
@@ -57,13 +60,18 @@ const Upload = () => {
               <CardHeader>
                 <CardTitle>Import Inventory Data</CardTitle>
                 <CardDescription>
-                  {currentUser.role === "admin" 
+                  {canUploadItemMaster() 
                     ? "Upload your Item Master (without quantity) and Closing Stock (with quantity) files"
                     : "Upload your Closing Stock (with quantity) files for your assigned locations"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUploader userRole={currentUser.role} assignedLocations={currentUser.assignedLocations} />
+                <FileUploader 
+                  userRole={currentUser.role} 
+                  assignedLocations={currentUser.assignedLocations}
+                  canUploadItemMaster={canUploadItemMaster()}
+                  canUploadClosingStock={canUploadClosingStock()}
+                />
               </CardContent>
             </Card>
             
@@ -82,19 +90,21 @@ const Upload = () => {
             <ExampleData />
           </TabsContent>
           
-          <TabsContent value="clear">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-red-600">Clear All Data</CardTitle>
-                <CardDescription>
-                  This will reset all your inventory data. This action cannot be undone.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ClearDataButton />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {canUploadItemMaster() && (
+            <TabsContent value="clear">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-red-600">Clear All Data</CardTitle>
+                  <CardDescription>
+                    This will reset all your inventory data. This action cannot be undone.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ClearDataButton />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>

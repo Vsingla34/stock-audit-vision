@@ -55,10 +55,28 @@ export const useUserAccess = () => {
     return false;
   };
   
-  // Check if user can upload item master data
+  // Check if user can upload item master data (admin only)
   const canUploadItemMaster = (): boolean => {
     if (!currentUser) return false;
     return currentUser.role === "admin";
+  };
+  
+  // Check if user can upload closing stock (admin and auditor only)
+  const canUploadClosingStock = (): boolean => {
+    if (!currentUser) return false;
+    return ["admin", "auditor"].includes(currentUser.role);
+  };
+  
+  // Check if user can view reports
+  const canViewReports = (): boolean => {
+    if (!currentUser) return false;
+    return true; // All authenticated users can view reports
+  };
+  
+  // Check if user is client (view-only)
+  const isClientUser = (): boolean => {
+    if (!currentUser) return false;
+    return currentUser.role === "client";
   };
   
   // Get user role display name
@@ -79,6 +97,9 @@ export const useUserAccess = () => {
     canPerformAudits,
     canUploadData,
     canUploadItemMaster,
+    canUploadClosingStock,
+    canViewReports,
+    isClientUser,
     userRoleDisplay,
     hasPermission,
     userRole: currentUser?.role,
