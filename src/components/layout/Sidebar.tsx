@@ -6,7 +6,8 @@ import {
   FileChartPie,
   FileChartColumn,
   Search,
-  Building
+  Building,
+  FileSearch
 } from "lucide-react";
 import {
   Sidebar as ShadcnSidebar,
@@ -42,6 +43,11 @@ const menuItems = [
     title: "Locations",
     url: "/locations",
     icon: Building
+  },
+  {
+    title: "Admin Overview",
+    url: "/admin",
+    icon: FileSearch
   },
   {
     title: "Reports",
