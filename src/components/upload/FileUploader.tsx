@@ -137,6 +137,7 @@ export const FileUploader = ({
         });
       }
     } catch (error) {
+      console.error("Import error:", error);
       toast.error("Import failed", {
         description: "There was an error processing your file."
       });
