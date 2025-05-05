@@ -23,12 +23,37 @@ export interface Location {
   active?: boolean;
 }
 
+export type QuestionType = 'text' | 'singleSelect' | 'multiSelect' | 'yesNo';
+
+export interface QuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  type: QuestionType;
+  required: boolean;
+  options?: QuestionOption[];
+}
+
+export interface QuestionnaireAnswer {
+  questionId: string;
+  locationId: string;
+  answer: string | string[];
+  answeredBy?: string;
+  answeredOn: string;
+}
+
 // Define the context interface
 interface InventoryContextType {
   itemMaster: InventoryItem[];
   closingStock: InventoryItem[];
   auditedItems: InventoryItem[];
   locations: Location[];
+  questions: Question[];
+  questionnaireAnswers: QuestionnaireAnswer[];
   setItemMaster: (items: InventoryItem[]) => void;
   setClosingStock: (items: InventoryItem[]) => void;
   updateAuditedItem: (item: InventoryItem) => void;
@@ -53,6 +78,13 @@ interface InventoryContextType {
   scanItem: (barcode: string, location: string) => void;
   searchItem: (query: string) => InventoryItem[];
   addItemToAudit: (item: InventoryItem, quantity: number) => void;
+  addQuestion: (question: Omit<Question, 'id'>) => void;
+  updateQuestion: (question: Question) => void;
+  deleteQuestion: (questionId: string) => void;
+  saveQuestionnaireAnswer: (answer: Omit<QuestionnaireAnswer, 'answeredOn'>) => void;
+  getLocationQuestionnaireAnswers: (locationId: string) => QuestionnaireAnswer[];
+  getQuestionsForLocation: (locationId: string) => Question[];
+  getQuestionById: (questionId: string) => Question | undefined;
 }
 
 // Create the context
@@ -64,6 +96,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [closingStock, setClosingStockState] = useState<InventoryItem[]>([]);
   const [auditedItems, setAuditedItemsState] = useState<InventoryItem[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<QuestionnaireAnswer[]>([]);
   
   // Load data from persistence service on component mount
   useEffect(() => {
@@ -73,6 +107,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setClosingStockState(DataPersistenceService.getClosingStock());
         setAuditedItemsState(DataPersistenceService.getAuditedItems());
         setLocations(DataPersistenceService.getLocations());
+        setQuestions(DataPersistenceService.getQuestions() || []);
+        setQuestionnaireAnswers(DataPersistenceService.getQuestionnaireAnswers() || []);
       } catch (error) {
         console.error("Error loading inventory data:", error);
       }
@@ -235,11 +271,88 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   };
   
+  // Add a new question
+  const addQuestion = (question: Omit<Question, 'id'>) => {
+    const id = `q${Date.now()}`;
+    const newQuestion: Question = {
+      id,
+      ...question
+    };
+    
+    const updatedQuestions = [...questions, newQuestion];
+    setQuestions(updatedQuestions);
+    DataPersistenceService.setQuestions(updatedQuestions);
+  };
+  
+  // Update an existing question
+  const updateQuestion = (question: Question) => {
+    const updatedQuestions = questions.map(q => 
+      q.id === question.id ? question : q
+    );
+    
+    setQuestions(updatedQuestions);
+    DataPersistenceService.setQuestions(updatedQuestions);
+  };
+  
+  // Delete a question
+  const deleteQuestion = (questionId: string) => {
+    const updatedQuestions = questions.filter(q => q.id !== questionId);
+    setQuestions(updatedQuestions);
+    DataPersistenceService.setQuestions(updatedQuestions);
+    
+    // Also remove any answers to this question
+    const updatedAnswers = questionnaireAnswers.filter(a => a.questionId !== questionId);
+    setQuestionnaireAnswers(updatedAnswers);
+    DataPersistenceService.setQuestionnaireAnswers(updatedAnswers);
+  };
+  
+  // Save a questionnaire answer
+  const saveQuestionnaireAnswer = (answer: Omit<QuestionnaireAnswer, 'answeredOn'>) => {
+    const newAnswer: QuestionnaireAnswer = {
+      ...answer,
+      answeredOn: new Date().toISOString()
+    };
+    
+    // Check if we're updating an existing answer
+    const existingIndex = questionnaireAnswers.findIndex(
+      a => a.questionId === answer.questionId && a.locationId === answer.locationId
+    );
+    
+    let updatedAnswers: QuestionnaireAnswer[];
+    
+    if (existingIndex >= 0) {
+      updatedAnswers = [...questionnaireAnswers];
+      updatedAnswers[existingIndex] = newAnswer;
+    } else {
+      updatedAnswers = [...questionnaireAnswers, newAnswer];
+    }
+    
+    setQuestionnaireAnswers(updatedAnswers);
+    DataPersistenceService.setQuestionnaireAnswers(updatedAnswers);
+  };
+  
+  // Get all answers for a specific location
+  const getLocationQuestionnaireAnswers = (locationId: string): QuestionnaireAnswer[] => {
+    return questionnaireAnswers.filter(answer => answer.locationId === locationId);
+  };
+  
+  // Get all questions that have been answered for a location and those that haven't
+  const getQuestionsForLocation = (locationId: string): Question[] => {
+    return questions;
+  };
+  
+  // Get a question by its ID
+  const getQuestionById = (questionId: string): Question | undefined => {
+    return questions.find(q => q.id === questionId);
+  };
+  
   // Clear all data
   const clearAllData = () => {
     setItemMasterState([]);
     setClosingStockState([]);
     setAuditedItemsState([]);
+    setQuestions([]);
+    setQuestionnaireAnswers([]);
     DataPersistenceService.clearInventoryData();
   };
   
@@ -250,6 +363,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         closingStock,
         auditedItems,
         locations,
+        questions,
+        questionnaireAnswers,
         setItemMaster,
         setClosingStock,
         updateAuditedItem,
@@ -261,7 +376,14 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         deleteLocation,
         scanItem,
         searchItem,
-        addItemToAudit
+        addItemToAudit,
+        addQuestion,
+        updateQuestion,
+        deleteQuestion,
+        saveQuestionnaireAnswer,
+        getLocationQuestionnaireAnswers,
+        getQuestionsForLocation,
+        getQuestionById
       }}
     >
       {children}

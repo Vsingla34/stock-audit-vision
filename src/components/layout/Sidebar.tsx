@@ -1,246 +1,155 @@
 
+import { useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import {
-  Barcode,
-  FileText,
+  BarChart3,
+  ClipboardEdit,
   FileSpreadsheet,
-  FileChartPie,
-  FileChartColumn,
+  Home,
   Search,
+  Settings,
   Building,
-  FileSearch,
   Users,
-  UserRound,
-  LogOut
+  UserCircle,
+  ScanBarcode,
+  LogOut,
+  Upload,
+  ListChecks
 } from "lucide-react";
-import {
-  Sidebar as ShadcnSidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  SidebarFooter
-} from "@/components/ui/sidebar";
-import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "@/context/UserContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useInventory } from "@/context/InventoryContext";
 
-export const Sidebar = () => {
-  const { currentUser, logout, hasPermission } = useUser();
-  const navigate = useNavigate();
-  
-  // Base items available to all users
-  const baseMenuItems = [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: FileChartPie,
-      permission: null
-    },
-    {
-      title: "Barcode Scanner",
-      url: "/scanner",
-      icon: Barcode,
-      permission: "conductAudits"
-    },
-    {
-      title: "Search",
-      url: "/search",
-      icon: Search,
-      permission: null
-    }
-  ];
+export function Sidebar({ isMobile, setMobileOpen }: { isMobile?: boolean, setMobileOpen?: (open: boolean) => void }) {
+  const location = useLocation();
+  const { isAuthenticated, logout, currentUser } = useUser();
+  const { accessibleLocations, userRole, userRoleDisplay } = useUserAccess();
+  const { locations } = useInventory();
 
-  // Admin only items
-  const adminMenuItems = [
-    {
-      title: "User Management",
-      url: "/users",
-      icon: Users,
-      permission: "manageUsers"
-    },
-    {
-      title: "Admin Overview",
-      url: "/admin",
-      icon: FileSearch,
-      permission: "viewAllLocations"
-    }
-  ];
+  // Don't show sidebar on login page
+  if (location.pathname === "/login") return null;
   
-  // Items for auditors and admins
-  const operationalMenuItems = [
-    {
-      title: "Locations",
-      url: "/locations",
-      icon: Building,
-      permission: null
-    },
-    {
-      title: "Upload Data",
-      url: "/upload",
-      icon: FileText,
-      permission: "viewAllLocations"
-    }
-  ];
-  
-  // Report items for all users
-  const reportMenuItems = [
-    {
-      title: "Reports",
-      url: "/reports",
-      icon: FileSpreadsheet,
-      permission: "viewReports"
-    },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      icon: FileChartColumn,
-      permission: "viewReports"
-    }
-  ];
+  // Don't show sidebar if not authenticated
+  if (!isAuthenticated) return null;
 
-  // Filter menu items based on user permissions
-  const getFilteredItems = (items) => {
-    return items.filter(item => 
-      item.permission === null || hasPermission(item.permission)
+  // Create navigation based on user permissions
+  const navigation = useMemo(() => {
+    const nav = [
+      { name: "Dashboard", href: "/", icon: Home },
+    ];
+    
+    // Scanner access for auditors and admins
+    if (["admin", "auditor"].includes(userRole)) {
+      nav.push({ name: "Scanner", href: "/scanner", icon: ScanBarcode });
+    }
+    
+    // Common sections for all users
+    nav.push(
+      { name: "Search", href: "/search", icon: Search },
+      { name: "Reports", href: "/reports", icon: FileSpreadsheet },
+      { name: "Analytics", href: "/analytics", icon: BarChart3 }
     );
-  };
-
-  const filteredBaseItems = getFilteredItems(baseMenuItems);
-  const filteredAdminItems = getFilteredItems(adminMenuItems);
-  const filteredOperationalItems = getFilteredItems(operationalMenuItems);
-  const filteredReportItems = getFilteredItems(reportMenuItems);
+    
+    // Questionnaire access for all users
+    nav.push({ name: "Questionnaire", href: "/questionnaire", icon: ListChecks });
+    
+    // Upload access for admins and auditors
+    if (["admin", "auditor"].includes(userRole)) {
+      nav.push({ name: "Upload Data", href: "/upload", icon: Upload });
+    }
+    
+    // Location management
+    nav.push({ name: "Locations", href: "/locations", icon: Building });
+    
+    // Admin sections
+    if (userRole === "admin") {
+      nav.push(
+        { name: "Admin Overview", href: "/admin", icon: Settings },
+        { name: "User Management", href: "/users", icon: Users },
+      );
+    }
+    
+    // User profile for all users
+    nav.push({ name: "My Profile", href: "/profile", icon: UserCircle });
+    
+    return nav;
+  }, [userRole]);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+  };
+  
+  const handleLinkClick = () => {
+    if (isMobile && setMobileOpen) {
+      setMobileOpen(false);
+    }
   };
 
   return (
-    <ShadcnSidebar>
-      <SidebarHeader>
-        <div className="px-4 py-3">
-          <h2 className="text-xl font-bold text-white">Stock Audit Vision</h2>
-          <p className="text-xs text-gray-300">Inventory Management System</p>
-        </div>
-        <SidebarTrigger className="absolute right-2 top-4 text-white" />
-      </SidebarHeader>
-      <SidebarContent>
-        {currentUser && (
-          <div className="mb-6 px-4 py-2">
-            <Link to="/profile" className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {currentUser.name.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="text-sm font-medium text-gray-100">{currentUser.name}</div>
-                <Badge variant="outline" className="mt-1 text-xs bg-transparent text-gray-300 border-gray-600">
-                  {currentUser.role}
-                </Badge>
-              </div>
-            </Link>
+    <aside className="flex h-full w-64 flex-col overflow-y-auto border-r border-r-accent bg-card px-5 py-8">
+      <div className="flex flex-col h-full">
+        <div>
+          <div className="space-y-1">
+            <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+              Inventory Audit App
+            </h2>
+            <div className="bg-accent/50 rounded-lg p-2 mb-4">
+              <p className="text-xs text-muted-foreground mb-1">Logged in as:</p>
+              <p className="font-medium text-sm truncate">{currentUser?.username}</p>
+              <p className="text-xs text-muted-foreground">{userRoleDisplay()}</p>
+              {userRole !== "admin" && accessibleLocations().length > 0 && (
+                <div className="mt-1 pt-1 border-t border-accent/50">
+                  <p className="text-xs text-muted-foreground mb-1">Assigned locations:</p>
+                  <div className="max-h-16 overflow-y-auto">
+                    {accessibleLocations().map(loc => (
+                      <div key={loc.id} className="text-xs py-0.5 truncate">
+                        {loc.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {filteredBaseItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="font-medium">
-                    <Link to={item.url}>
-                      <item.icon className="h-5 w-5" />
-                      <span className="ml-1">{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        
-        {filteredOperationalItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Operations</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredOperationalItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="font-medium">
-                      <Link to={item.url}>
-                        <item.icon className="h-5 w-5" />
-                        <span className="ml-1">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {filteredReportItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Reports</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredReportItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="font-medium">
-                      <Link to={item.url}>
-                        <item.icon className="h-5 w-5" />
-                        <span className="ml-1">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {filteredAdminItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredAdminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="font-medium">
-                      <Link to={item.url}>
-                        <item.icon className="h-5 w-5" />
-                        <span className="ml-1">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-      </SidebarContent>
-      
-      <SidebarFooter>
-        <div className="px-3 py-2">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-gray-300 hover:text-white hover:bg-primary/20"
+          <nav className="flex flex-col space-y-1">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={handleLinkClick}
+                  className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:text-primary hover:bg-accent/50"
+                  }`}
+                >
+                  <item.icon className="mr-3 h-4 w-4" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+        <div className="mt-auto pt-4">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
             onClick={handleLogout}
           >
-            <LogOut className="h-5 w-5 mr-2" />
-            Logout
+            <LogOut className="mr-3 h-4 w-4" />
+            <span>Log out</span>
           </Button>
+          <div className="mt-4 px-2 text-center">
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} Inventory Audit System
+            </p>
+          </div>
         </div>
-      </SidebarFooter>
-    </ShadcnSidebar>
+      </div>
+    </aside>
   );
-};
+}

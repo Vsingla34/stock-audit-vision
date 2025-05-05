@@ -28,7 +28,15 @@ declare module "jspdf" {
 }
 
 const Reports = () => {
-  const { auditedItems, itemMaster, getInventorySummary, getLocationSummary, locations } = useInventory();
+  const { 
+    auditedItems, 
+    itemMaster, 
+    getInventorySummary, 
+    getLocationSummary, 
+    locations,
+    getLocationQuestionnaireAnswers,
+    getQuestionById
+  } = useInventory();
   const { currentUser } = useUser();
   const { accessibleLocations } = useUserAccess();
   const reportRef = useRef(null);
@@ -184,6 +192,18 @@ const Reports = () => {
     generateCSV(summaryData, `audit_summary_report${locationInfo}.csv`);
   };
 
+  const formatQuestionnaireAnswer = (answer: string | string[], questionType: string) => {
+    if (questionType === "yesNo") {
+      return answer === "yes" ? "Yes" : "No";
+    }
+    
+    if (Array.isArray(answer)) {
+      return answer.join(", ");
+    }
+    
+    return answer;
+  };
+
   const generatePDFReport = () => {
     const doc = new jsPDF();
     
@@ -224,7 +244,7 @@ const Reports = () => {
     
     // Add observations section
     const finalY = (doc as any)['lastAutoTable'] ? (doc as any)['lastAutoTable'].finalY : 90;
-    const currentY = finalY + 10;
+    let currentY = finalY + 10;
     doc.setFontSize(14);
     doc.text("Observations", 14, currentY);
     
@@ -318,6 +338,64 @@ const Reports = () => {
       });
     }
     
+    // Add questionnaire section if a location is selected
+    if (selectedLocation) {
+      const answers = getLocationQuestionnaireAnswers(selectedLocation);
+      
+      if (answers.length > 0) {
+        // Get currentY position after the previous section
+        const lastTableY = (doc as any)['lastAutoTable'] 
+          ? (doc as any)['lastAutoTable'].finalY + 15 
+          : observationY + 15;
+        
+        doc.setFontSize(14);
+        doc.text("Audit Questionnaire Responses", 14, lastTableY);
+        
+        // Format answers for the table
+        const answerData = answers.map(answer => {
+          const question = getQuestionById(answer.questionId);
+          if (!question) return null;
+          
+          return [
+            question.text,
+            formatQuestionnaireAnswer(answer.answer, question.type),
+            answer.answeredBy || 'N/A',
+            new Date(answer.answeredOn).toLocaleDateString()
+          ];
+        }).filter(Boolean);
+        
+        if (answerData.length > 0) {
+          autoTable(doc, {
+            startY: lastTableY + 5,
+            head: [["Question", "Response", "Answered By", "Date"]],
+            body: answerData,
+            theme: 'grid',
+            headStyles: { fillColor: [79, 70, 229] }, // Indigo for questionnaire
+            styles: { fontSize: 9 },
+            columnStyles: {
+              0: { cellWidth: 80 },
+              1: { cellWidth: 60 },
+            }
+          });
+        }
+        
+        // Add signature section at the bottom of the page
+        const lastPos = (doc as any)['lastAutoTable'] ? (doc as any)['lastAutoTable'].finalY + 20 : doc.internal.pageSize.height - 60;
+        
+        doc.setFontSize(12);
+        doc.text("Auditor Sign-off", 14, lastPos);
+        
+        doc.setFontSize(10);
+        doc.text("Name: _________________________", 14, lastPos + 10);
+        doc.text("Signature: _____________________", 14, lastPos + 20);
+        doc.text("Date: __________________________", 14, lastPos + 30);
+        
+        doc.text("Client Sign-off", 120, lastPos + 10);
+        doc.text("Name: _________________________", 120, lastPos + 20);
+        doc.text("Signature: _____________________", 120, lastPos + 30);
+      }
+    }
+    
     const locationInfo = selectedLocation ? 
       `_${locations.find(loc => loc.id === selectedLocation)?.name}` : '';
       
@@ -372,7 +450,7 @@ const Reports = () => {
               </SelectTrigger>
               <SelectContent>
                 {currentUser?.role === "admin" && (
-                  <SelectItem value="all-locations">All Locations</SelectItem>
+                  <SelectItem value="">All Locations</SelectItem>
                 )}
                 {userLocations.map(location => (
                   <SelectItem key={location.id} value={location.id}>

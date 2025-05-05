@@ -18,6 +18,7 @@ import UserManagement from "./pages/UserManagement";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Questionnaire from "./pages/Questionnaire";
 import { useUserAccess } from "./hooks/useUserAccess";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/admin" element={<ProtectedRoute requiredPermission="viewAllLocations"><AdminOverview /></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute requiredPermission="manageUsers"><UserManagement /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/questionnaire" element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
