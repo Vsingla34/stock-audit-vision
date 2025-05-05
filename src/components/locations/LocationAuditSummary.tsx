@@ -38,7 +38,7 @@ export const LocationAuditSummary = () => {
             </SelectTrigger>
             <SelectContent>
               {locations.map((location) => (
-                <SelectItem key={location.id} value={location.name}>
+                <SelectItem key={location.id} value={location.id}>
                   {location.name}
                 </SelectItem>
               ))}

@@ -1,3 +1,4 @@
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInventory } from "@/context/InventoryContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -371,7 +372,7 @@ const Reports = () => {
               </SelectTrigger>
               <SelectContent>
                 {currentUser?.role === "admin" && (
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all-locations">All Locations</SelectItem>
                 )}
                 {userLocations.map(location => (
                   <SelectItem key={location.id} value={location.id}>
