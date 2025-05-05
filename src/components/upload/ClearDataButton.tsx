@@ -1,64 +1,68 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useInventory } from "@/context/InventoryContext";
 import { Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 export const ClearDataButton = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { setItemMaster, setClosingStock, setAuditedItems } = useInventory();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { clearAllData } = useInventory();
 
-  const handleClearData = () => {
-    setItemMaster([]);
-    setClosingStock([]);
-    setAuditedItems([]);
-    toast.success("All data cleared successfully", {
-      description: "Item master, closing stock, and audit data have been reset"
-    });
+  const handleClear = () => {
+    try {
+      clearAllData();
+      setDialogOpen(false);
+      toast.success("Inventory data cleared successfully");
+    } catch (error) {
+      toast.error("Failed to clear inventory data");
+      console.error("Error clearing data:", error);
+    }
   };
 
   return (
     <>
       <Button 
         variant="destructive" 
-        className="w-full"
-        onClick={() => setIsOpen(true)}
+        className="w-full" 
+        onClick={() => setDialogOpen(true)}
       >
         <Trash2 className="mr-2 h-4 w-4" />
-        Clear All Data
+        Clear All Inventory Data
       </Button>
 
-      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will permanently delete all your inventory data including item master,
-              closing stock, and audit records. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleClearData}
-              className="bg-red-600 hover:bg-red-700"
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear Inventory Data</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to clear all inventory data? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDialogOpen(false)}
             >
-              Yes, clear all data
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleClear}
+            >
+              Delete All Data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

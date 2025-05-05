@@ -1,4 +1,3 @@
-
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInventory } from "@/context/InventoryContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,15 @@ import { useRef, useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserAccess } from "@/hooks/useUserAccess";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 declare module "jspdf" {
   interface jsPDF {
@@ -55,8 +63,15 @@ const Reports = () => {
         setFilteredItemMaster(itemMaster.filter(item => item.location === locationName));
         setSummary(getLocationSummary(locationName));
       }
+    } else {
+      // Default case: show all data for admin
+      if (currentUser?.role === "admin") {
+        setFilteredAuditedItems(auditedItems);
+        setFilteredItemMaster(itemMaster);
+        setSummary(getInventorySummary());
+      }
     }
-  }, [selectedLocation, auditedItems, itemMaster, locations, currentUser]);
+  }, [selectedLocation, auditedItems, itemMaster, locations, currentUser, getInventorySummary, getLocationSummary]);
 
   const generateCSV = (data: any[], filename: string) => {
     // Get all possible headers from all objects
@@ -309,6 +324,28 @@ const Reports = () => {
     toast.success("PDF Report downloaded");
   };
 
+  // New function to display data in table
+  const getDataForTable = () => {
+    // Combine item master with audited items
+    return filteredItemMaster.map(item => {
+      const auditedItem = filteredAuditedItems.find(a => a.id === item.id && a.location === item.location);
+      return {
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        category: item.category,
+        location: item.location,
+        systemQuantity: item.systemQuantity,
+        physicalQuantity: auditedItem?.physicalQuantity || 0,
+        variance: auditedItem ? auditedItem.physicalQuantity - item.systemQuantity : -item.systemQuantity,
+        status: auditedItem?.status || 'pending',
+        lastAudited: auditedItem?.lastAudited || ''
+      };
+    });
+  };
+
+  const tableData = getDataForTable();
+
   return (
     <AppLayout>
       <div className="space-y-6" ref={reportRef}>
@@ -478,6 +515,59 @@ const Reports = () => {
                     : 0}%` }}
                 ></div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Add a table view of the report data */}
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>Detailed Report</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>System Qty</TableHead>
+                    <TableHead>Physical Qty</TableHead>
+                    <TableHead>Variance</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableData.length > 0 ? (
+                    tableData.map((item) => (
+                      <TableRow key={`${item.id}-${item.location}`}>
+                        <TableCell>{item.sku}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.location}</TableCell>
+                        <TableCell>{item.systemQuantity}</TableCell>
+                        <TableCell>{item.physicalQuantity}</TableCell>
+                        <TableCell className={item.variance !== 0 ? "text-red-600 font-medium" : ""}>{item.variance}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            item.status === 'matched' ? 'bg-green-100 text-green-800' : 
+                            item.status === 'discrepancy' ? 'bg-red-100 text-red-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.status === 'matched' ? 'Matched' : 
+                             item.status === 'discrepancy' ? 'Discrepancy' : 
+                             'Pending'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">No data available</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

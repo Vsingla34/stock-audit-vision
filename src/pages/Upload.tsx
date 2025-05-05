@@ -33,7 +33,11 @@ const Upload = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Upload Data</h1>
-          <p className="text-muted-foreground">Import your Item Master and Closing Stock data</p>
+          <p className="text-muted-foreground">
+            {canUploadItemMaster() 
+              ? "Import your Item Master and Closing Stock data"
+              : "Import your Closing Stock data for your assigned locations"}
+          </p>
         </div>
         
         {currentUser.role === "auditor" && (
@@ -68,7 +72,7 @@ const Upload = () => {
               <CardContent>
                 <FileUploader 
                   userRole={currentUser.role} 
-                  assignedLocations={currentUser.assignedLocations}
+                  assignedLocations={currentUser.assignedLocations || []}
                   canUploadItemMaster={canUploadItemMaster()}
                   canUploadClosingStock={canUploadClosingStock()}
                 />
@@ -112,4 +116,3 @@ const Upload = () => {
 };
 
 export default Upload;
-
