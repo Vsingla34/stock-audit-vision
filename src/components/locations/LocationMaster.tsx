@@ -9,12 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { 
   Building, 
   Plus, 
-  Pencil, 
+  Edit, 
   Trash2, 
-  Save, 
+  Check, 
   X,
-  CheckCircle,
-  XCircle
+  Check as CheckIcon,
+  X as XIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -172,7 +172,7 @@ export const LocationMaster = () => {
                     size="sm"
                     onClick={handleAddLocation}
                   >
-                    <Save className="mr-1 h-4 w-4" />
+                    <Check className="mr-1 h-4 w-4" />
                     Save
                   </Button>
                 </div>
@@ -231,7 +231,7 @@ export const LocationMaster = () => {
                         <TableCell>{getLocationItemCount(location.name)}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button size="sm" onClick={handleUpdateLocation}>
-                            <Save className="h-4 w-4" />
+                            <Check className="h-4 w-4" />
                           </Button>
                           <Button size="sm" variant="outline" onClick={cancelEditing}>
                             <X className="h-4 w-4" />
@@ -246,12 +246,12 @@ export const LocationMaster = () => {
                           <div className="flex items-center gap-1">
                             {location.active ? (
                               <>
-                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <CheckIcon className="h-4 w-4 text-green-500" />
                                 <span className="text-green-600">Active</span>
                               </>
                             ) : (
                               <>
-                                <XCircle className="h-4 w-4 text-red-500" />
+                                <XIcon className="h-4 w-4 text-red-500" />
                                 <span className="text-red-600">Inactive</span>
                               </>
                             )}
@@ -264,7 +264,7 @@ export const LocationMaster = () => {
                             variant="outline" 
                             onClick={() => startEditing(location)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button 
                             size="sm" 

@@ -42,20 +42,15 @@ export const BarcodeScanner = () => {
     }
     
     if (manualBarcode.trim()) {
-      const found = itemMaster.some(item => 
-        (item.id === manualBarcode || item.sku === manualBarcode) && 
-        item.location === selectedLocation
-      );
-      
-      if (found) {
+      try {
         scanItem(manualBarcode, selectedLocation);
         toast.success("Item scanned successfully", {
           description: `Barcode ${manualBarcode} has been registered at ${selectedLocation}.`,
         });
         setManualBarcode("");
-      } else {
+      } catch (error: any) {
         toast.error("Item not found", {
-          description: `No item found with barcode ${manualBarcode} at ${selectedLocation}.`,
+          description: error.message || `No item found with barcode ${manualBarcode} at ${selectedLocation}.`,
         });
       }
     }

@@ -27,9 +27,9 @@ const initializeDB = (): DatabaseTables => {
     closingStock: [],
     auditedItems: [],
     locations: [
-      { id: 'loc1', name: 'Warehouse A' },
-      { id: 'loc2', name: 'Warehouse B' },
-      { id: 'loc3', name: 'Store C' }
+      { id: 'loc1', name: 'Warehouse A', description: 'Main storage facility', active: true },
+      { id: 'loc2', name: 'Warehouse B', description: 'Secondary storage', active: true },
+      { id: 'loc3', name: 'Store C', description: 'Retail outlet', active: true }
     ],
     users: [
       {

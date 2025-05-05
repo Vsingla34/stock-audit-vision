@@ -19,6 +19,8 @@ export interface InventoryItem {
 export interface Location {
   id: string;
   name: string;
+  description?: string;
+  active?: boolean;
 }
 
 // Define the context interface
@@ -45,6 +47,12 @@ interface InventoryContextType {
     discrepancies: number;
   };
   clearAllData: () => void;
+  addLocation: (location: Omit<Location, 'id'>) => void;
+  updateLocation: (location: Location) => void;
+  deleteLocation: (locationId: string) => void;
+  scanItem: (barcode: string, location: string) => void;
+  searchItem: (query: string) => InventoryItem[];
+  addItemToAudit: (item: InventoryItem, quantity: number) => void;
 }
 
 // Create the context
@@ -107,6 +115,92 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     DataPersistenceService.setAuditedItems(newAuditedItems);
   };
   
+  // Add a new location
+  const addLocation = (location: Omit<Location, 'id'>) => {
+    const id = `loc${Date.now()}`;
+    const newLocation: Location = {
+      id,
+      name: location.name,
+      description: location.description,
+      active: location.active !== undefined ? location.active : true
+    };
+    
+    const updatedLocations = [...locations, newLocation];
+    setLocations(updatedLocations);
+    DataPersistenceService.updateLocation(newLocation);
+  };
+  
+  // Update an existing location
+  const updateLocation = (location: Location) => {
+    const updatedLocations = locations.map(loc => 
+      loc.id === location.id ? location : loc
+    );
+    
+    setLocations(updatedLocations);
+    DataPersistenceService.updateLocation(location);
+  };
+  
+  // Delete a location
+  const deleteLocation = (locationId: string) => {
+    // Check if the location is being used by any items
+    const itemsInLocation = itemMaster.some(item => {
+      const loc = locations.find(l => l.id === locationId);
+      return loc && item.location === loc.name;
+    });
+    
+    if (itemsInLocation) {
+      throw new Error("Cannot delete location that contains inventory items");
+    }
+    
+    const updatedLocations = locations.filter(loc => loc.id !== locationId);
+    setLocations(updatedLocations);
+    DataPersistenceService.deleteLocation(locationId);
+  };
+  
+  // Scan an item by barcode
+  const scanItem = (barcode: string, location: string) => {
+    // Find item in master data
+    const item = itemMaster.find(i => 
+      (i.id === barcode || i.sku === barcode) && i.location === location
+    );
+    
+    if (!item) {
+      throw new Error(`Item with barcode ${barcode} not found at location ${location}`);
+    }
+    
+    // Update the audited item
+    updateAuditedItem({
+      ...item,
+      physicalQuantity: (item.physicalQuantity || 0) + 1,
+      status: 'pending'
+    });
+  };
+  
+  // Search for items
+  const searchItem = (query: string): InventoryItem[] => {
+    if (!query || query.length < 2) return [];
+    
+    const lowerCaseQuery = query.toLowerCase();
+    return itemMaster.filter(item => 
+      item.id?.toLowerCase().includes(lowerCaseQuery) ||
+      item.sku?.toLowerCase().includes(lowerCaseQuery) ||
+      item.name?.toLowerCase().includes(lowerCaseQuery) ||
+      item.category?.toLowerCase().includes(lowerCaseQuery)
+    );
+  };
+  
+  // Add an item to the audit with specified quantity
+  const addItemToAudit = (item: InventoryItem, quantity: number) => {
+    if (quantity <= 0) return;
+    
+    updateAuditedItem({
+      ...item,
+      physicalQuantity: quantity,
+      status: quantity === item.systemQuantity ? 'matched' : 'discrepancy',
+      lastAudited: new Date().toISOString()
+    });
+  };
+  
   // Calculate summary for all inventory
   const getInventorySummary = () => {
     const totalItems = itemMaster.length;
@@ -161,7 +255,13 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateAuditedItem,
         getInventorySummary,
         getLocationSummary,
-        clearAllData
+        clearAllData,
+        addLocation,
+        updateLocation,
+        deleteLocation,
+        scanItem,
+        searchItem,
+        addItemToAudit
       }}
     >
       {children}
