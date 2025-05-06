@@ -9,7 +9,7 @@ import { Download, Barcode, Search, ClipboardList, Upload } from "lucide-react";
 import { useUserAccess } from "@/hooks/useUserAccess";
 
 const Index = () => {
-  const { canUploadData, canConductAudits } = useUserAccess();
+  const { canUploadData, canPerformAudits } = useUserAccess();
   
   return (
     <AppLayout>
@@ -52,7 +52,7 @@ const Index = () => {
                   </Link>
                 </Button>
               )}
-              {canConductAudits() && (
+              {canPerformAudits() && (
                 <Button asChild variant="outline" className="h-24 flex flex-col">
                   <Link to="/questionnaire">
                     <ClipboardList className="h-6 w-6 mb-2" />
