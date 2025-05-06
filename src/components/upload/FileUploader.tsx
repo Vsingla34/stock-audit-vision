@@ -23,7 +23,7 @@ export const FileUploader = ({
 }: FileUploaderProps) => {
   const [itemMasterFile, setItemMasterFile] = useState<File | null>(null);
   const [closingStockFile, setClosingStockFile] = useState<File | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [selectedLocation, setSelectedLocation] = useState<string>("default");
   const { setItemMaster, setClosingStock, locations } = useInventory();
 
   // Filter locations based on user role and assignments
@@ -65,15 +65,16 @@ export const FileUploader = ({
         let items = processCSV(text);
         
         // For auditors, we need to validate location selection
-        if (userRole === "auditor" && !selectedLocation) {
+        if (userRole === "auditor" && (!selectedLocation || selectedLocation === "default")) {
           toast.error("Please select a location");
           return;
         }
         
+        const locationToUse = userRole === "auditor" ? selectedLocation : undefined;
         const processedItems = processClosingStockData(
           items,
-          userRole === "auditor" ? selectedLocation : undefined,
-          userRole === "auditor" ? locations : undefined
+          locationToUse,
+          locations
         );
         
         setClosingStock(processedItems);
@@ -98,7 +99,9 @@ export const FileUploader = ({
       return !itemMasterFile;
     }
     if (canUploadClosingStock) {
-      return userRole === "auditor" ? (!closingStockFile || !selectedLocation) : !closingStockFile;
+      return userRole === "auditor" ? 
+        (!closingStockFile || !selectedLocation || selectedLocation === "default") : 
+        !closingStockFile;
     }
     return true;
   };
@@ -131,7 +134,7 @@ export const FileUploader = ({
             onFileChange={handleClosingStockUpload}
           />
           
-          {userRole === "auditor" && (
+          {userRole === "auditor" && accessibleLocations.length > 0 && (
             <div className="mt-4">
               <LocationSelector
                 locations={accessibleLocations}
