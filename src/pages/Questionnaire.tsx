@@ -13,17 +13,19 @@ const Questionnaire = () => {
   const { userRole, accessibleLocations, canUploadData } = useUserAccess();
   const { locations } = useInventory();
   const [activeTab, setActiveTab] = useState("management");
-  const [selectedLocation, setSelectedLocation] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("none");
   const userLocations = accessibleLocations();
   
   // Set initial location if user has restricted access
   useEffect(() => {
     if (userRole !== "admin" && userLocations.length > 0) {
       setSelectedLocation(userLocations[0].id);
+    } else {
+      setSelectedLocation("none");
     }
   }, [userRole, userLocations]);
   
-  const locationName = selectedLocation 
+  const locationName = selectedLocation && selectedLocation !== "none" 
     ? locations.find(loc => loc.id === selectedLocation)?.name
     : "";
   
@@ -53,14 +55,16 @@ const Questionnaire = () => {
             ) : (
               <div className="space-y-6">
                 <div className="max-w-md">
-                  <LocationSelector
-                    locations={userLocations}
-                    selectedLocation={selectedLocation}
-                    onLocationChange={setSelectedLocation}
-                  />
+                  {userLocations.length > 0 && (
+                    <LocationSelector
+                      locations={userLocations}
+                      selectedLocation={selectedLocation}
+                      onLocationChange={setSelectedLocation}
+                    />
+                  )}
                 </div>
                 
-                {selectedLocation ? (
+                {selectedLocation && selectedLocation !== "none" ? (
                   <QuestionnaireForm 
                     locationId={selectedLocation} 
                     locationName={locationName}

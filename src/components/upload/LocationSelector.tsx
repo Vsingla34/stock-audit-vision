@@ -26,7 +26,9 @@ export const LocationSelector: FC<LocationSelectorProps> = ({
         </SelectTrigger>
         <SelectContent>
           {locations.map(loc => (
-            <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+            <SelectItem key={loc.id} value={loc.id || "default-location"}>
+              {loc.name}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
