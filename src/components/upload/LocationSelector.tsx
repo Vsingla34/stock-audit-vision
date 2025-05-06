@@ -8,17 +8,19 @@ interface LocationSelectorProps {
   selectedLocation: string;
   onLocationChange: (value: string) => void;
   placeholder?: string;
+  className?: string;
 }
 
 export const LocationSelector: FC<LocationSelectorProps> = ({
   locations,
   selectedLocation,
   onLocationChange,
-  placeholder = "Choose a location"
+  placeholder = "Choose a location",
+  className
 }) => {
-  if (locations.length === 0) {
+  if (!locations || locations.length === 0) {
     return (
-      <div className="mb-4">
+      <div className={`mb-4 ${className || ''}`}>
         <label className="block text-sm font-medium mb-2">Select Location:</label>
         <div className="text-sm text-muted-foreground">No locations available</div>
       </div>
@@ -26,7 +28,7 @@ export const LocationSelector: FC<LocationSelectorProps> = ({
   }
 
   return (
-    <div className="mb-4">
+    <div className={`mb-4 ${className || ''}`}>
       <label className="block text-sm font-medium mb-2">Select Location:</label>
       <Select 
         value={selectedLocation} 
