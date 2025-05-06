@@ -1,48 +1,48 @@
 
 import { FC } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText, Info } from "lucide-react";
 
 interface ImportSectionProps {
-  onImport: () => void;
-  disabled: boolean;
   canUploadItemMaster: boolean;
   canUploadClosingStock: boolean;
   showLocationInfo?: boolean;
 }
 
 export const ImportSection: FC<ImportSectionProps> = ({
-  onImport,
-  disabled,
   canUploadItemMaster,
   canUploadClosingStock,
   showLocationInfo = false
 }) => {
   return (
-    <Card className="md:col-span-2">
-      <CardContent className="pt-6">
-        <Button 
-          className="w-full" 
-          disabled={disabled}
-          onClick={onImport}
-        >
-          Import Selected Files
-        </Button>
-        
-        <div className="mt-4 text-sm text-muted-foreground">
-          <p className="font-medium mb-1">File Format Requirements:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>CSV files only</li>
-            <li>First row must contain column headers</li>
-            {canUploadItemMaster && <li>Required columns for Item Master: id, sku, name, category, location</li>}
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center">
+          <Info className="h-4 w-4 mr-2" />
+          Import Instructions
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-1 mb-2">
+            <FileText className="h-4 w-4" />
+            <span className="font-medium">File Format Requirements:</span>
+          </div>
+          <ul className="list-disc list-inside space-y-1.5 pl-1">
+            <li>CSV files only with clear column headers in the first row</li>
+            {canUploadItemMaster && (
+              <li className="pl-2">
+                <span className="font-medium">Item Master:</span> Required columns: id, sku, name, category, location
+              </li>
+            )}
             {canUploadClosingStock && (
-              <li>
-                Required columns for Closing Stock: id, sku, systemQuantity
+              <li className="pl-2">
+                <span className="font-medium">Closing Stock:</span> Required columns: id, sku, systemQuantity
                 {!showLocationInfo && ", location"}
               </li>
             )}
             {canUploadItemMaster && canUploadClosingStock && (
-              <li>Multiple locations are supported - items with the same SKU but different locations will be treated as separate inventory items</li>
+              <li className="pt-1">Multiple locations are supported - items with the same SKU but different locations will be treated as separate inventory items</li>
             )}
           </ul>
         </div>

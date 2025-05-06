@@ -5,9 +5,12 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Download, Barcode, Search } from "lucide-react";
+import { Download, Barcode, Search, ClipboardList, Upload } from "lucide-react";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 const Index = () => {
+  const { canUploadData, canConductAudits } = useUserAccess();
+  
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -38,6 +41,25 @@ const Index = () => {
                   <div>Search Inventory</div>
                 </Link>
               </Button>
+            </div>
+            
+            <div className="grid gap-4 grid-cols-2 mt-2">
+              {canUploadData() && (
+                <Button asChild variant="outline" className="h-24 flex flex-col">
+                  <Link to="/upload">
+                    <Upload className="h-6 w-6 mb-2" />
+                    <div>Upload Data</div>
+                  </Link>
+                </Button>
+              )}
+              {canConductAudits() && (
+                <Button asChild variant="outline" className="h-24 flex flex-col">
+                  <Link to="/questionnaire">
+                    <ClipboardList className="h-6 w-6 mb-2" />
+                    <div>Questionnaires</div>
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
