@@ -14,7 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      inventory_items: {
+        Row: {
+          created_at: string
+          id: string
+          last_audited: string | null
+          location: string
+          name: string
+          notes: string | null
+          physical_quantity: number | null
+          sku: string
+          status: string | null
+          system_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_audited?: string | null
+          location: string
+          name: string
+          notes?: string | null
+          physical_quantity?: number | null
+          sku: string
+          status?: string | null
+          system_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_audited?: string | null
+          location?: string
+          name?: string
+          notes?: string | null
+          physical_quantity?: number | null
+          sku?: string
+          status?: string | null
+          system_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      locations: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      questionnaire_answers: {
+        Row: {
+          answer: string
+          answered_by: string | null
+          answered_on: string
+          created_at: string
+          id: string
+          location_id: string
+          question_id: string
+        }
+        Insert: {
+          answer: string
+          answered_by?: string | null
+          answered_on?: string
+          created_at?: string
+          id?: string
+          location_id: string
+          question_id: string
+        }
+        Update: {
+          answer?: string
+          answered_by?: string | null
+          answered_on?: string
+          created_at?: string
+          id?: string
+          location_id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_answers_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questionnaire_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          created_at: string
+          id: string
+          options: Json | null
+          required: boolean
+          text: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          required?: boolean
+          text: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          required?: boolean
+          text?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
