@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import DataPersistenceService from "@/services/DataPersistenceService";
+import SupabaseDataService from "@/services/SupabaseDataService";
 
 // Define types for inventory items
 export interface InventoryItem {
@@ -56,7 +56,7 @@ interface InventoryContextType {
   questionnaireAnswers: QuestionnaireAnswer[];
   setItemMaster: (items: InventoryItem[]) => void;
   setClosingStock: (items: InventoryItem[]) => void;
-  updateAuditedItem: (item: InventoryItem) => void;
+  updateAuditedItem: (item: InventoryItem) => Promise<void>;
   getInventorySummary: () => {
     totalItems: number;
     auditedItems: number;
@@ -72,16 +72,16 @@ interface InventoryContextType {
     discrepancies: number;
   };
   clearAllData: () => void;
-  addLocation: (location: Omit<Location, 'id'>) => void;
-  updateLocation: (location: Location) => void;
-  deleteLocation: (locationId: string) => void;
+  addLocation: (location: Omit<Location, 'id'>) => Promise<void>;
+  updateLocation: (location: Location) => Promise<void>;
+  deleteLocation: (locationId: string) => Promise<void>;
   scanItem: (barcode: string, location: string) => void;
   searchItem: (query: string) => InventoryItem[];
   addItemToAudit: (item: InventoryItem, quantity: number) => void;
-  addQuestion: (question: Omit<Question, 'id'>) => void;
-  updateQuestion: (question: Question) => void;
-  deleteQuestion: (questionId: string) => void;
-  saveQuestionnaireAnswer: (answer: Omit<QuestionnaireAnswer, 'answeredOn'>) => void;
+  addQuestion: (question: Omit<Question, 'id'>) => Promise<void>;
+  updateQuestion: (question: Question) => Promise<void>;
+  deleteQuestion: (questionId: string) => Promise<void>;
+  saveQuestionnaireAnswer: (answer: Omit<QuestionnaireAnswer, 'answeredOn'>) => Promise<void>;
   getLocationQuestionnaireAnswers: (locationId: string) => QuestionnaireAnswer[];
   getQuestionsForLocation: (locationId: string) => Question[];
   getQuestionById: (questionId: string) => Question | undefined;
@@ -103,12 +103,12 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     const loadData = async () => {
       try {
-        setItemMasterState(DataPersistenceService.getItemMaster());
-        setClosingStockState(DataPersistenceService.getClosingStock());
-        setAuditedItemsState(DataPersistenceService.getAuditedItems());
-        setLocations(DataPersistenceService.getLocations());
-        setQuestions(DataPersistenceService.getQuestions() || []);
-        setQuestionnaireAnswers(DataPersistenceService.getQuestionnaireAnswers() || []);
+        setItemMasterState(await SupabaseDataService.getItemMaster());
+        setClosingStockState(await SupabaseDataService.getClosingStock());
+        setAuditedItemsState(await SupabaseDataService.getAuditedItems());
+        setLocations(await SupabaseDataService.getLocations());
+        setQuestions(await SupabaseDataService.getQuestions() || []);
+        setQuestionnaireAnswers(await SupabaseDataService.getQuestionnaireAnswers() || []);
       } catch (error) {
         console.error("Error loading inventory data:", error);
       }
@@ -118,19 +118,19 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
   
   // Set item master with persistence
-  const setItemMaster = (items: InventoryItem[]) => {
+  const setItemMaster = async (items: InventoryItem[]) => {
     setItemMasterState(items);
-    DataPersistenceService.setItemMaster(items);
+    await SupabaseDataService.setItemMaster(items);
   };
   
   // Set closing stock with persistence
-  const setClosingStock = (items: InventoryItem[]) => {
+  const setClosingStock = async (items: InventoryItem[]) => {
     setClosingStockState(items);
-    DataPersistenceService.setClosingStock(items);
+    await SupabaseDataService.setClosingStock(items);
   };
   
   // Update a single audited item
-  const updateAuditedItem = (item: InventoryItem) => {
+  const updateAuditedItem = async (item: InventoryItem) => {
     const newAuditedItems = [...auditedItems];
     const index = newAuditedItems.findIndex(i => i.id === item.id && i.location === item.location);
     
@@ -148,11 +148,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     
     setAuditedItemsState(newAuditedItems);
-    DataPersistenceService.setAuditedItems(newAuditedItems);
+    await SupabaseDataService.setAuditedItems(newAuditedItems);
   };
   
   // Add a new location
-  const addLocation = (location: Omit<Location, 'id'>) => {
+  const addLocation = async (location: Omit<Location, 'id'>) => {
     const id = `loc${Date.now()}`;
     const newLocation: Location = {
       id,
@@ -163,21 +163,21 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     const updatedLocations = [...locations, newLocation];
     setLocations(updatedLocations);
-    DataPersistenceService.updateLocation(newLocation);
+    await SupabaseDataService.updateLocation(newLocation);
   };
   
   // Update an existing location
-  const updateLocation = (location: Location) => {
+  const updateLocation = async (location: Location) => {
     const updatedLocations = locations.map(loc => 
       loc.id === location.id ? location : loc
     );
     
     setLocations(updatedLocations);
-    DataPersistenceService.updateLocation(location);
+    await SupabaseDataService.updateLocation(location);
   };
   
   // Delete a location
-  const deleteLocation = (locationId: string) => {
+  const deleteLocation = async (locationId: string) => {
     // Check if the location is being used by any items
     const itemsInLocation = itemMaster.some(item => {
       const loc = locations.find(l => l.id === locationId);
@@ -190,7 +190,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     const updatedLocations = locations.filter(loc => loc.id !== locationId);
     setLocations(updatedLocations);
-    DataPersistenceService.deleteLocation(locationId);
+    await SupabaseDataService.deleteLocation(locationId);
   };
   
   // Scan an item by barcode
@@ -272,7 +272,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
   
   // Add a new question
-  const addQuestion = (question: Omit<Question, 'id'>) => {
+  const addQuestion = async (question: Omit<Question, 'id'>) => {
     const id = `q${Date.now()}`;
     const newQuestion: Question = {
       id,
@@ -281,33 +281,33 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     const updatedQuestions = [...questions, newQuestion];
     setQuestions(updatedQuestions);
-    DataPersistenceService.setQuestions(updatedQuestions);
+    await SupabaseDataService.setQuestions(updatedQuestions);
   };
   
   // Update an existing question
-  const updateQuestion = (question: Question) => {
+  const updateQuestion = async (question: Question) => {
     const updatedQuestions = questions.map(q => 
       q.id === question.id ? question : q
     );
     
     setQuestions(updatedQuestions);
-    DataPersistenceService.setQuestions(updatedQuestions);
+    await SupabaseDataService.setQuestions(updatedQuestions);
   };
   
   // Delete a question
-  const deleteQuestion = (questionId: string) => {
+  const deleteQuestion = async (questionId: string) => {
     const updatedQuestions = questions.filter(q => q.id !== questionId);
     setQuestions(updatedQuestions);
-    DataPersistenceService.setQuestions(updatedQuestions);
+    await SupabaseDataService.setQuestions(updatedQuestions);
     
     // Also remove any answers to this question
     const updatedAnswers = questionnaireAnswers.filter(a => a.questionId !== questionId);
     setQuestionnaireAnswers(updatedAnswers);
-    DataPersistenceService.setQuestionnaireAnswers(updatedAnswers);
+    await SupabaseDataService.setQuestionnaireAnswers(updatedAnswers);
   };
   
   // Save a questionnaire answer
-  const saveQuestionnaireAnswer = (answer: Omit<QuestionnaireAnswer, 'answeredOn'>) => {
+  const saveQuestionnaireAnswer = async (answer: Omit<QuestionnaireAnswer, 'answeredOn'>) => {
     const newAnswer: QuestionnaireAnswer = {
       ...answer,
       answeredOn: new Date().toISOString()
@@ -328,7 +328,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     
     setQuestionnaireAnswers(updatedAnswers);
-    DataPersistenceService.setQuestionnaireAnswers(updatedAnswers);
+    await SupabaseDataService.setQuestionnaireAnswers(updatedAnswers);
   };
   
   // Get all answers for a specific location
@@ -347,13 +347,13 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
   
   // Clear all data
-  const clearAllData = () => {
+  const clearAllData = async () => {
     setItemMasterState([]);
     setClosingStockState([]);
     setAuditedItemsState([]);
     setQuestions([]);
     setQuestionnaireAnswers([]);
-    DataPersistenceService.clearInventoryData();
+    await SupabaseDataService.clearInventoryData();
   };
   
   return (
