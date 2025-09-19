@@ -39,7 +39,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedData) {
       return JSON.parse(savedData);
     }
-    // Sample users for demonstration
+    // Sample users for demonstration - using placeholder IDs that will be updated with real location IDs
     return [
       {
         id: "user1",
@@ -54,7 +54,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: "auditor1@example.com",
         role: "auditor",
         name: "Auditor One",
-        assignedLocations: ["loc-1", "loc-2"]
+        assignedLocations: [] // Will be populated with real location IDs
       },
       {
         id: "user3",
@@ -63,7 +63,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: "client",
         name: "Client Company",
         companyId: "company1",
-        assignedLocations: ["loc-1", "loc-2", "loc-3"]
+        assignedLocations: [] // Will be populated with real location IDs
       },
       {
         id: "user4",
@@ -71,7 +71,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: "auditor2@example.com",
         role: "auditor",
         name: "Auditor Two",
-        assignedLocations: ["loc-3"]
+        assignedLocations: [] // Will be populated with real location IDs
       }
     ];
   });
