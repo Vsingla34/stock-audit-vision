@@ -19,8 +19,8 @@ class SupabaseDataService {
 
   // Helper function to convert app inventory item to database format
   private inventoryItemToDb(item: InventoryItem): any {
+    // Do NOT send custom string IDs to the database. Let Postgres generate UUIDs.
     return {
-      id: item.id,
       sku: item.sku,
       name: item.name,
       location: item.location,
@@ -142,14 +142,23 @@ class SupabaseDataService {
   // Location Methods
   public async updateLocation(location: Location): Promise<void> {
     try {
+      // Only include ID if it's a valid UUID; otherwise let Postgres generate it
+      const isValidUuid = (v: string) =>
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+
+      const upsertData: any = {
+        name: location.name,
+        description: location.description,
+        active: location.active ?? true,
+      };
+
+      if (location.id && isValidUuid(location.id)) {
+        upsertData.id = location.id;
+      }
+
       const { error } = await supabase
         .from('locations')
-        .upsert({
-          id: location.id,
-          name: location.name,
-          description: location.description,
-          active: location.active ?? true,
-        });
+        .upsert(upsertData);
       
       if (error) throw error;
     } catch (error) {
