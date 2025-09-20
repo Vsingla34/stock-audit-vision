@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 export const SearchInventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,17 +14,27 @@ export const SearchInventory = () => {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   
   const { searchItem, addItemToAudit } = useInventory();
+  const { accessibleLocations } = useUserAccess();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (searchQuery.length >= 2) {
       const results = searchItem(searchQuery);
-      setSearchResults(results);
+      
+      // Filter results by accessible locations
+      const userLocations = accessibleLocations();
+      const accessibleLocationNames = userLocations.map(loc => loc.name);
+      
+      const filteredResults = userLocations.length === 0 ? // Admin sees all
+        results : 
+        results.filter(item => accessibleLocationNames.includes(item.location));
+      
+      setSearchResults(filteredResults);
       
       // Initialize quantities for new search results
       const newQuantities: Record<string, number> = {};
-      results.forEach(item => {
+      filteredResults.forEach(item => {
         newQuantities[item.id] = quantities[item.id] || 0;
       });
       setQuantities(newQuantities);

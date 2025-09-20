@@ -101,7 +101,7 @@ export const processItemMasterData = (items: InventoryItem[]): InventoryItem[] =
 };
 
 /**
- * Process closing stock data from CSV
+ * Process closing stock data from CSV - Only updates system quantities
  */
 export const processClosingStockData = (
   items: InventoryItem[], 
@@ -122,7 +122,7 @@ export const processClosingStockData = (
     }
   }
   
-  // Process closing stock items
+  // Process closing stock items - these should only contain system quantities to update existing items
   return processedItems.map((item, index) => ({
     ...item,
     id: item.id || `item_${Date.now()}_${index}`,
@@ -130,7 +130,7 @@ export const processClosingStockData = (
     name: item.name || `Item ${index}`,
     location: item.location || "Default",
     systemQuantity: item.systemQuantity || 0,
-    physicalQuantity: item.physicalQuantity,
+    physicalQuantity: undefined, // Closing stock should not set physical quantities
     status: 'pending' as const
   }));
 };

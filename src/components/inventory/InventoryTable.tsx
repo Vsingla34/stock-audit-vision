@@ -11,13 +11,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 export const InventoryTable = () => {
   const { itemMaster, auditedItems } = useInventory();
+  const { accessibleLocations } = useUserAccess();
   
-  // Combine data from itemMaster and auditedItems
-  const tableData = itemMaster.map(item => {
-    const auditedItem = auditedItems.find(a => a.id === item.id && a.location === item.location);
+  // Get accessible location names
+  const userLocations = accessibleLocations();
+  const accessibleLocationNames = userLocations.map(loc => loc.name);
+  
+  // Filter items by accessible locations
+  const filteredItemMaster = itemMaster.filter(item => 
+    userLocations.length === 0 || // Admin sees all
+    accessibleLocationNames.includes(item.location)
+  );
+  
+  const filteredAuditedItems = auditedItems.filter(item =>
+    userLocations.length === 0 || // Admin sees all  
+    accessibleLocationNames.includes(item.location)
+  );
+  
+  // Combine data from filtered itemMaster and auditedItems
+  const tableData = filteredItemMaster.map(item => {
+    const auditedItem = filteredAuditedItems.find(a => a.id === item.id && a.location === item.location);
     if (auditedItem) {
       return {
         ...item,

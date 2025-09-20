@@ -4,10 +4,43 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { BarChart, FileText, CheckCheck, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 export const InventoryOverview = () => {
-  const { getInventorySummary } = useInventory();
-  const summary = getInventorySummary();
+  const { getInventorySummary, getLocationSummary, itemMaster, auditedItems } = useInventory();
+  const { accessibleLocations } = useUserAccess();
+  
+  // Get accessible location names
+  const userLocations = accessibleLocations();
+  const accessibleLocationNames = userLocations.map(loc => loc.name);
+  
+  // Calculate summary based on accessible locations
+  let summary;
+  if (userLocations.length === 0) { // Admin sees all
+    summary = getInventorySummary();
+  } else {
+    // Filter data by accessible locations and calculate custom summary
+    const filteredItemMaster = itemMaster.filter(item => 
+      accessibleLocationNames.includes(item.location)
+    );
+    const filteredAuditedItems = auditedItems.filter(item =>
+      accessibleLocationNames.includes(item.location)
+    );
+    
+    const totalItems = filteredItemMaster.length;
+    const auditedItemsCount = filteredAuditedItems.length;
+    const matchedItems = filteredAuditedItems.filter(item => item.status === 'matched').length;
+    const discrepancies = filteredAuditedItems.filter(item => item.status === 'discrepancy').length;
+    
+    summary = {
+      totalItems,
+      auditedItems: auditedItemsCount,
+      pendingItems: totalItems - auditedItemsCount,
+      matched: matchedItems,
+      discrepancies
+    };
+  }
+  
   const completionPercentage = summary.totalItems > 0 
     ? Math.round((summary.auditedItems / summary.totalItems) * 100) 
     : 0;

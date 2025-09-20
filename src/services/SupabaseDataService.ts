@@ -72,17 +72,26 @@ class SupabaseDataService {
     }
   }
 
-  // Closing Stock Methods
+  // Closing Stock Methods - Updates system quantities for existing items only
   public async setClosingStock(items: InventoryItem[]): Promise<void> {
     try {
-      // Upsert items (insert or update existing ones)
       if (items.length > 0) {
-        const dbItems = items.map(item => this.inventoryItemToDb(item));
-        const { error } = await supabase
-          .from('inventory_items')
-          .upsert(dbItems, { onConflict: 'sku,location' });
-        
-        if (error) throw error;
+        // For each closing stock item, update only the system_quantity of existing items
+        for (const item of items) {
+          const { error } = await supabase
+            .from('inventory_items')
+            .update({ 
+              system_quantity: item.systemQuantity || 0,
+              status: 'pending' 
+            })
+            .eq('sku', item.sku)
+            .eq('location', item.location);
+          
+          if (error) {
+            console.error(`Error updating closing stock for ${item.sku}:`, error);
+            // Continue with other items even if one fails
+          }
+        }
       }
     } catch (error) {
       console.error('Error setting closing stock:', error);
